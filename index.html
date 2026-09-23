@@ -4,7 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>hideout</title>
+    <meta name="color-scheme" content="dark light" />
+    <title>Hideout</title>
+    <!-- Apply the saved theme before first paint. next-themes' own script only runs on server-rendered HTML.
+         Keep the storage key and default in sync with src/components/theme-provider.tsx. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('hideout-theme') || 'dark'
+          if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          var d = document.documentElement
+          d.classList.add(t)
+          d.style.colorScheme = t
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
