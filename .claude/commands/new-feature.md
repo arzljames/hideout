@@ -53,4 +53,20 @@ Finish with a summary containing:
 - Verification results (commands and outcomes)
 - Review verdicts and anything deferred
 - Manual QA checklist: the flows to click through in both themes and on a mobile viewport
-- A Conventional Commit message and PR description (do not commit or push unless I ask)
+- A Conventional Commit message and PR description
+
+End by asking whether to commit, push, and open the PR. **Stop and wait for my answer.**
+
+## Phase 6: Commit and PR (after I confirm)
+
+1. Check `git status` and `git diff --stat`. Stage only this feature's files, never `.env*`, `dist/`, or `test-results/`. If there's anything unrelated, ask before including it.
+2. Make sure you're on the feature branch, not `main`.
+3. Commit with the Conventional Commit message from Phase 5, e.g. `feat(<feature>): <summary>`, with a short bullet body. Use one commit per feature unless I ask for more.
+4. Push with `git push -u origin <branch>`.
+5. Open the PR against `main` with `gh pr create --base main --title "<commit subject>" --body-file <file>`, using the Phase 5 PR description written to a scratch file. The PR description needs these sections:
+   - **Summary**
+   - **Deferred**
+   - **Testing** (the commands from Phase 3 step 6 and their results, plus anything not run and why)
+   - **Manual QA** (the checklist from Phase 5)
+6. If `gh` isn't installed or authenticated, don't install it. Give me the compare URL (`https://github.com/<owner>/<repo>/pull/new/<branch>`) and the PR description to paste.
+7. Report the commit hash, the pushed branch, and the PR URL. Never force-push, amend pushed commits, or merge.
