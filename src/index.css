@@ -8,6 +8,7 @@
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
+    --color-presence-online: var(--presence-online);
     --color-persona-foreground: var(--persona-foreground);
     --color-persona-3: var(--persona-3);
     --color-persona-2: var(--persona-2);
@@ -82,6 +83,8 @@
     --persona-2: oklch(0.48 0.1 55);
     --persona-3: oklch(0.48 0.12 150);
     --persona-foreground: oklch(0.985 0.005 260);
+    /* Online presence dot (non-text graphic): 3.78:1 on background, 3.94:1 on card. */
+    --presence-online: oklch(0.6 0.15 250);
     --radius: 0.625rem;
     --sidebar: oklch(0.97 0.006 255);
     --sidebar-foreground: oklch(0.22 0.03 260);
@@ -122,6 +125,8 @@
     --persona-2: oklch(0.5 0.1 55);
     --persona-3: oklch(0.5 0.12 150);
     --persona-foreground: oklch(0.985 0.005 260);
+    /* Online presence dot (non-text graphic): 6.31:1 on background, 5.70:1 on card. */
+    --presence-online: oklch(0.7 0.14 245);
     --sidebar: oklch(0.21 0.013 260);
     --sidebar-foreground: oklch(0.97 0.005 260);
     --sidebar-primary: oklch(0.8 0.14 172);
