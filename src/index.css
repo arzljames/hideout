@@ -21,6 +21,7 @@
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar: var(--sidebar);
+    --color-sidebar-rail: var(--sidebar-rail);
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
     --color-chart-3: var(--chart-3);
@@ -94,6 +95,8 @@
     --sidebar-accent-foreground: oklch(0.22 0.03 260);
     --sidebar-border: oklch(0.91 0.01 255);
     --sidebar-ring: oklch(0.6 0.11 175);
+    /* Room rail: one step deeper than the sidebar panel. */
+    --sidebar-rail: oklch(0.905 0.014 255);
 }
 
 .dark {
@@ -135,6 +138,8 @@
     --sidebar-accent-foreground: oklch(0.97 0.005 260);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.8 0.14 172);
+    /* Room rail: darkest surface in the app. */
+    --sidebar-rail: oklch(0.185 0.013 260);
 }
 
 @layer base {
