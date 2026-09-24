@@ -1,4 +1,4 @@
-import { AppHeader } from '@/features/shell'
+import { AppHeader } from '@/components/app-header'
 import { cn } from '@/lib/utils'
 import { HomeEmptyState } from './home-empty-state'
 

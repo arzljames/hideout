@@ -1,7 +1,7 @@
 import { Link as LinkIcon, Lock, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CreateRoomDialog } from '@/features/rooms'
-import { CenteredState } from '@/features/shell'
+import { CenteredState } from '@/components/centered-state'
 
 interface HomeEmptyStateProps {
   className?: string

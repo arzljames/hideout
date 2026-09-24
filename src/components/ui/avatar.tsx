@@ -90,6 +90,8 @@ const avatarBadgeVariants = cva(
         default: "bg-primary text-primary-foreground",
         /** Presence dot for an online member. */
         online: "bg-presence-online",
+        /** Hollow dot for an offline member. */
+        offline: "border-2 border-muted-foreground bg-background",
       },
     },
     defaultVariants: {

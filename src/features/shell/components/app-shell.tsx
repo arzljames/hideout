@@ -2,8 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { sampleViewer } from '../sample-viewer'
-import { NavPanel } from './nav-panel'
-import { RoomRail } from './room-rail'
+import { SidebarColumns } from './sidebar-columns'
 
 interface AppShellProps {
   children: ReactNode
@@ -25,10 +24,7 @@ export function AppShell({ children, className }: AppShellProps) {
     <TooltipProvider>
       <SidebarProvider style={shellStyle} className={className}>
         <Sidebar mobileTitle="Navigation" mobileDescription="Rooms, invites and your account.">
-          <div className="flex h-full min-h-0">
-            <RoomRail />
-            <NavPanel viewer={viewer} />
-          </div>
+          <SidebarColumns viewer={viewer} />
         </Sidebar>
         <SidebarInset>{children}</SidebarInset>
       </SidebarProvider>
