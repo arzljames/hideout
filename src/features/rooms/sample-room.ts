@@ -17,6 +17,8 @@ export interface RoomMember {
   activity?: string
   /** The signed-in user. */
   isViewer?: boolean
+  /** ISO 8601 date they joined the room. */
+  joinedAt: string
 }
 
 export interface TextChannel {
@@ -42,6 +44,9 @@ export interface VoiceChannel {
 }
 
 export type Channel = TextChannel | VoiceChannel
+
+export type RoomRole = 'owner' | 'admin' | 'member'
+
 
 export interface Room {
   id: string
@@ -76,7 +81,7 @@ const nightOwls: Room = {
     { id: 'late-night', kind: 'voice', name: 'late night', participants: [] },
   ],
   members: [
-    { id: 'arzl', name: 'Arzl', tone: 'persona-3', presence: 'online', role: 'owner', isViewer: true },
+    { id: 'arzl', name: 'Arzl', tone: 'persona-3', presence: 'online', role: 'owner', isViewer: true, joinedAt: '2026-03-02' },
     {
       id: 'maya',
       name: 'Maya',
@@ -84,6 +89,7 @@ const nightOwls: Room = {
       presence: 'online',
       role: 'admin',
       activity: 'Playing Elden Ring',
+      joinedAt: '2026-03-02',
     },
     {
       id: 'jun',
@@ -91,20 +97,23 @@ const nightOwls: Room = {
       tone: 'persona-2',
       presence: 'online',
       activity: 'Playing Deep Rock Galactic',
+      joinedAt: '2026-05-14',
     },
-    { id: 'alex', name: 'Alex', tone: 'persona-1', presence: 'online' },
-    { id: 'priya', name: 'Priya', tone: 'persona-2', presence: 'online' },
-    { id: 'theo', name: 'Theo', tone: 'persona-3', presence: 'offline' },
-    { id: 'sam', name: 'Sam', presence: 'offline' },
+    { id: 'alex', name: 'Alex', tone: 'persona-1', presence: 'online', joinedAt: '2026-06-20' },
+    { id: 'priya', name: 'Priya', tone: 'persona-2', presence: 'online', joinedAt: '2026-08-03' },
+    { id: 'theo', name: 'Theo', tone: 'persona-3', presence: 'offline', joinedAt: '2026-09-01' },
+    { id: 'sam', name: 'Sam', presence: 'offline', joinedAt: '2026-09-18' },
   ],
 }
 
-const viewerOnly = (id: string): RoomMember => ({
-  id,
+const viewerMember = (role?: RoomMember['role']): RoomMember => ({
+  id: 'arzl',
   name: 'Arzl',
   tone: 'persona-3',
   presence: 'online',
   isViewer: true,
+  role,
+  joinedAt: '2026-07-11',
 })
 
 export const sampleRooms: Room[] = [
@@ -119,7 +128,17 @@ export const sampleRooms: Room[] = [
       { id: 'strats', kind: 'text', name: 'strats' },
       { id: 'raid', kind: 'voice', name: 'raid', participants: [] },
     ],
-    members: [viewerOnly('arzl')],
+    members: [
+      {
+        id: 'theo',
+        name: 'Theo',
+        tone: 'persona-3',
+        presence: 'offline',
+        role: 'owner',
+        joinedAt: '2026-04-09',
+      },
+      viewerMember('admin'),
+    ],
   },
   {
     id: 'deep-rock',
@@ -130,7 +149,7 @@ export const sampleRooms: Room[] = [
       { id: 'general', kind: 'text', name: 'general' },
       { id: 'mission-control', kind: 'voice', name: 'mission control', participants: [] },
     ],
-    members: [viewerOnly('arzl')],
+    members: [viewerMember()],
   },
   {
     id: 'pit-lane',
@@ -141,12 +160,9 @@ export const sampleRooms: Room[] = [
       { id: 'paddock', kind: 'text', name: 'paddock' },
       { id: 'grid', kind: 'voice', name: 'grid', participants: [] },
     ],
-    members: [viewerOnly('arzl')],
+    members: [viewerMember()],
   },
 ]
-
-/** Pending invites for the rail's Home badge. */
-export const samplePendingInviteCount: number = 3
 
 export function getSampleRoom(roomId: string): Room | undefined {
   return sampleRooms.find((room) => room.id === roomId)
@@ -154,6 +170,14 @@ export function getSampleRoom(roomId: string): Room | undefined {
 
 export function getRoomChannel(room: Room, channelId: string): Channel | undefined {
   return room.channels.find((channel) => channel.id === channelId)
+}
+
+/**
+ * The signed-in user's role, derived from their own member entry (plain member when it has no
+ * role), so there's one source of truth. TODO(api): read it from the room payload's viewer.
+ */
+export function getViewerRole(room: Room): RoomRole {
+  return room.members.find((member) => member.isViewer)?.role ?? 'member'
 }
 
 export function getRoomMember(room: Room, memberId: string): RoomMember | undefined {

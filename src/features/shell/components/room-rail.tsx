@@ -9,7 +9,8 @@ import {
   SidebarSeparator,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { CreateRoomDialog, samplePendingInviteCount, sampleRooms } from '@/features/rooms'
+import { usePendingInviteCount } from '@/features/invites'
+import { CreateRoomDialog, sampleRooms } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 
 interface RoomRailProps {
@@ -26,11 +27,12 @@ export function RoomRail({ className }: RoomRailProps) {
   const railTooltip = (label: string) => (isMobile ? undefined : { children: label, hidden: false })
 
   const matchRoute = useMatchRoute()
-  const isHome = Boolean(matchRoute({ to: '/' }))
+  // Home covers the Home sections too (Invites), so its tile stays highlighted there.
+  const isHome = Boolean(matchRoute({ to: '/' }) || matchRoute({ to: '/invites' }))
   const { roomId } = useParams({ strict: false })
-  // TODO(api): rooms and the pending invite count from their queries.
+  // TODO(api): rooms from the rooms query.
   const rooms = sampleRooms
-  const pendingInvites = samplePendingInviteCount
+  const pendingInvites = usePendingInviteCount()
   const homeLabel =
     pendingInvites > 0
       ? `Home, ${pendingInvites} pending ${pendingInvites === 1 ? 'invite' : 'invites'}`
@@ -56,7 +58,7 @@ export function RoomRail({ className }: RoomRailProps) {
             <Link to="/" aria-label={homeLabel} activeOptions={{ exact: true }}>
               <Inbox aria-hidden="true" />
               {pendingInvites > 0 && (
-                <Badge variant="count" aria-hidden="true" className="absolute -right-1 -bottom-1">
+                <Badge variant="count" pinned aria-hidden="true" className="absolute -right-1 -bottom-1">
                   {pendingInvites}
                 </Badge>
               )}
