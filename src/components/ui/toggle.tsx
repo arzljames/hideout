@@ -10,6 +10,9 @@ const toggleVariants = cva(
       variant: {
         default: "bg-transparent",
         outline: "border border-input bg-transparent hover:bg-muted",
+        /** Voice control (mute/deafen): ghost at rest; "on" (muted/deafened) is destructive. */
+        voice:
+          "bg-transparent text-muted-foreground hover:text-foreground data-[state=on]:bg-destructive/10 data-[state=on]:text-destructive dark:data-[state=on]:bg-destructive/20",
         /** Picker tile (e.g. room emoji): bordered; selected gets a primary border and tint. */
         tile: "border border-border bg-transparent data-[state=on]:border-primary data-[state=on]:bg-primary/10 dark:data-[state=on]:bg-primary/15",
       },
@@ -20,6 +23,7 @@ const toggleVariants = cva(
         lg: "h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         /** Square tile that fills its grid cell; content is a single emoji. */
         tile: "aspect-square h-auto w-full min-w-0 p-0 text-xl leading-none",
+        icon: "size-8 min-w-8 p-0",
       },
     },
     defaultVariants: {
@@ -29,20 +33,21 @@ const toggleVariants = cva(
   }
 )
 
-function Toggle({
-  className,
-  variant = "default",
-  size = "default",
-  ...props
-}: React.ComponentProps<typeof TogglePrimitive.Root> &
-  VariantProps<typeof toggleVariants>) {
+// forwardRef: React 18 drops `ref` on function components; Radix `asChild` triggers
+// (e.g. TooltipTrigger) need it for positioning and focus return.
+const Toggle = React.forwardRef<
+  React.ComponentRef<typeof TogglePrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root> &
+    VariantProps<typeof toggleVariants>
+>(function Toggle({ className, variant = "default", size = "default", ...props }, ref) {
   return (
     <TogglePrimitive.Root
+      ref={ref}
       data-slot="toggle"
       className={cn(toggleVariants({ variant, size, className }))}
       {...props}
     />
   )
-}
+})
 
 export { Toggle, toggleVariants }

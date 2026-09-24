@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { SearchX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { AppHeader } from './app-header'
+import { AppHeader } from '@/components/app-header'
 import { AppShell } from './app-shell'
-import { CenteredState } from './centered-state'
+import { CenteredState } from '@/components/centered-state'
 
 interface AppNotFoundScreenProps {
   className?: string

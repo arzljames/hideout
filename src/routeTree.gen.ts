@@ -13,6 +13,9 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
+import { Route as AppRoomsRoomIdIndexRouteImport } from './routes/_app.rooms.$roomId.index'
+import { Route as AppRoomsRoomIdChannelIdRouteImport } from './routes/_app.rooms.$roomId.$channelId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -33,16 +36,36 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRoomsRoomIdRoute = AppRoomsRoomIdRouteImport.update({
+  id: '/rooms/$roomId',
+  path: '/rooms/$roomId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRoomsRoomIdIndexRoute = AppRoomsRoomIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoomsRoomIdRoute,
+} as any)
+const AppRoomsRoomIdChannelIdRoute = AppRoomsRoomIdChannelIdRouteImport.update({
+  id: '/$channelId',
+  path: '/$channelId',
+  getParentRoute: () => AppRoomsRoomIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/sign-in': typeof SignInRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/rooms/$roomId': typeof AppRoomsRoomIdRouteWithChildren
+  '/rooms/$roomId/$channelId': typeof AppRoomsRoomIdChannelIdRoute
+  '/rooms/$roomId/': typeof AppRoomsRoomIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/invite/$token': typeof InviteTokenRoute
   '/': typeof AppIndexRoute
+  '/rooms/$roomId/$channelId': typeof AppRoomsRoomIdChannelIdRoute
+  '/rooms/$roomId': typeof AppRoomsRoomIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,13 +73,35 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/invite/$token': typeof InviteTokenRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/rooms/$roomId': typeof AppRoomsRoomIdRouteWithChildren
+  '/_app/rooms/$roomId/$channelId': typeof AppRoomsRoomIdChannelIdRoute
+  '/_app/rooms/$roomId/': typeof AppRoomsRoomIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/invite/$token'
+  fullPaths:
+    | '/'
+    | '/sign-in'
+    | '/invite/$token'
+    | '/rooms/$roomId'
+    | '/rooms/$roomId/$channelId'
+    | '/rooms/$roomId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/sign-in' | '/invite/$token' | '/'
-  id: '__root__' | '/_app' | '/sign-in' | '/invite/$token' | '/_app/'
+  to:
+    | '/sign-in'
+    | '/invite/$token'
+    | '/'
+    | '/rooms/$roomId/$channelId'
+    | '/rooms/$roomId'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/sign-in'
+    | '/invite/$token'
+    | '/_app/'
+    | '/_app/rooms/$roomId'
+    | '/_app/rooms/$roomId/$channelId'
+    | '/_app/rooms/$roomId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,15 +140,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/rooms/$roomId': {
+      id: '/_app/rooms/$roomId'
+      path: '/rooms/$roomId'
+      fullPath: '/rooms/$roomId'
+      preLoaderRoute: typeof AppRoomsRoomIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/rooms/$roomId/': {
+      id: '/_app/rooms/$roomId/'
+      path: '/'
+      fullPath: '/rooms/$roomId/'
+      preLoaderRoute: typeof AppRoomsRoomIdIndexRouteImport
+      parentRoute: typeof AppRoomsRoomIdRoute
+    }
+    '/_app/rooms/$roomId/$channelId': {
+      id: '/_app/rooms/$roomId/$channelId'
+      path: '/$channelId'
+      fullPath: '/rooms/$roomId/$channelId'
+      preLoaderRoute: typeof AppRoomsRoomIdChannelIdRouteImport
+      parentRoute: typeof AppRoomsRoomIdRoute
+    }
   }
 }
 
+interface AppRoomsRoomIdRouteChildren {
+  AppRoomsRoomIdChannelIdRoute: typeof AppRoomsRoomIdChannelIdRoute
+  AppRoomsRoomIdIndexRoute: typeof AppRoomsRoomIdIndexRoute
+}
+
+const AppRoomsRoomIdRouteChildren: AppRoomsRoomIdRouteChildren = {
+  AppRoomsRoomIdChannelIdRoute: AppRoomsRoomIdChannelIdRoute,
+  AppRoomsRoomIdIndexRoute: AppRoomsRoomIdIndexRoute,
+}
+
+const AppRoomsRoomIdRouteWithChildren = AppRoomsRoomIdRoute._addFileChildren(
+  AppRoomsRoomIdRouteChildren,
+)
+
 interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
+  AppRoomsRoomIdRoute: typeof AppRoomsRoomIdRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
+  AppRoomsRoomIdRoute: AppRoomsRoomIdRouteWithChildren,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

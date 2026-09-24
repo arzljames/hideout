@@ -14,7 +14,9 @@ interface UserAvatarProps {
   initials?: string
   tone?: VariantProps<typeof avatarFallbackVariants>['tone']
   size?: ComponentProps<typeof Avatar>['size']
-  status?: 'online'
+  status?: 'online' | 'offline'
+  /** Primary ring, e.g. while the user is speaking. */
+  emphasis?: boolean
   className?: string
 }
 
@@ -23,16 +25,24 @@ interface UserAvatarProps {
  * from assistive tech; render the user's name (and status, where it matters) as
  * text next to it.
  */
-export function UserAvatar({ name, initials, tone, size, status, className }: UserAvatarProps) {
+export function UserAvatar({
+  name,
+  initials,
+  tone,
+  size,
+  status,
+  emphasis,
+  className,
+}: UserAvatarProps) {
   // Array.from splits by code point, so emoji and styled letters stay whole.
   const fallback = (initials ?? Array.from(name.trim())[0] ?? '?').toUpperCase()
 
   return (
-    <Avatar size={size} className={cn(className)}>
+    <Avatar size={size} emphasis={emphasis} className={cn(className)}>
       <AvatarFallback tone={tone} aria-hidden="true">
         {fallback}
       </AvatarFallback>
-      {status === 'online' && <AvatarBadge status="online" aria-hidden="true" />}
+      {status && <AvatarBadge status={status} aria-hidden="true" />}
     </Avatar>
   )
 }

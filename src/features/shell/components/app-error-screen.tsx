@@ -1,9 +1,9 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import { RotateCw, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { AppHeader } from './app-header'
+import { AppHeader } from '@/components/app-header'
 import { AppShell } from './app-shell'
-import { CenteredState } from './centered-state'
+import { CenteredState } from '@/components/centered-state'
 
 interface AppErrorScreenProps {
   className?: string

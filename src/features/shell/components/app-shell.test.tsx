@@ -1,49 +1,45 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { HomeScreen } from '@/features/home'
 import { failOnConsoleError } from '@/test/console-guard'
-import { renderWithProviders } from '@/test/render'
-import { AppShell } from './app-shell'
+import { renderRoute } from '@/test/render'
 
 failOnConsoleError()
 
 function renderShell() {
-  return renderWithProviders(
-    <AppShell>
-      <HomeScreen />
-    </AppShell>,
-  )
+  // The shell reads route params and renders typed Links, so render the real route tree.
+  return renderRoute('/')
 }
 
 describe('AppShell on desktop', () => {
-  it('renders exactly one main landmark holding the page content', () => {
-    renderShell()
+  it('renders exactly one main landmark holding the page content', async () => {
+    await renderShell()
 
     const mains = screen.getAllByRole('main')
     expect(mains).toHaveLength(1)
     expect(mains[0]).toContainElement(screen.getByRole('heading', { level: 1, name: 'Home' }))
   })
 
-  it('shows the Rooms rail with Home marked as the current page and a Create a room button', () => {
-    renderShell()
+  it('shows the Rooms rail with Home marked as the current page and a Create a room button', async () => {
+    await renderShell()
 
     const rail = screen.getByRole('navigation', { name: 'Rooms' })
-    expect(within(rail).getByRole('button', { name: 'Home' })).toHaveAttribute(
+    // Home is a link now, and its name includes the pending invite count.
+    expect(within(rail).getByRole('link', { name: 'Home, 3 pending invites' })).toHaveAttribute(
       'aria-current',
       'page',
     )
     expect(within(rail).getByRole('button', { name: 'Create a room' })).toBeInTheDocument()
   })
 
-  it('lists Invites under Home sections', () => {
-    renderShell()
+  it('lists Invites under Home sections', async () => {
+    await renderShell()
 
     const sections = screen.getByRole('navigation', { name: 'Home sections' })
     expect(within(sections).getByRole('button', { name: 'Invites' })).toBeInTheDocument()
   })
 
-  it('shows the signed-in user with presence and labelled account actions', () => {
-    renderShell()
+  it('shows the signed-in user with presence and labelled account actions', async () => {
+    await renderShell()
 
     expect(screen.getByText('Arzl')).toBeInTheDocument()
     expect(screen.getByText('Online')).toBeInTheDocument()
@@ -51,8 +47,8 @@ describe('AppShell on desktop', () => {
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
   })
 
-  it('hides the avatar initial and presence dot from assistive technology', () => {
-    renderShell()
+  it('hides the avatar initial and presence dot from assistive technology', async () => {
+    await renderShell()
 
     const initial = screen.getByText('A')
     expect(initial.closest('[aria-hidden="true"]')).not.toBeNull()
@@ -67,7 +63,7 @@ describe('AppShell on desktop', () => {
 
   it('collapses with Ctrl+B, reveals the Open navigation trigger, and expands again from it', async () => {
     const user = userEvent.setup()
-    renderShell()
+    await renderShell()
 
     const trigger = screen.getByRole('button', { name: 'Open navigation' })
     // Visibility is CSS-driven (no stylesheet in jsdom), so assert the responsive class and the
@@ -91,7 +87,7 @@ describe('AppShell on desktop', () => {
 
   it('takes the collapsed sidebar out of the tab order', async () => {
     const user = userEvent.setup()
-    renderShell()
+    await renderShell()
 
     await user.keyboard('{Control>}b{/Control}')
     await user.tab()
@@ -119,7 +115,7 @@ describe('AppShell on mobile', () => {
 
   it('keeps the navigation closed until Open navigation is clicked', async () => {
     const user = userEvent.setup()
-    renderShell()
+    await renderShell()
 
     expect(screen.queryByRole('navigation', { name: 'Rooms' })).not.toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -135,7 +131,7 @@ describe('AppShell on mobile', () => {
   // Opening the sheet focuses the rail's Home button; a tooltip there must not swallow Escape.
   it('closes the navigation sheet with a single Escape', async () => {
     const user = userEvent.setup()
-    renderShell()
+    await renderShell()
 
     await user.click(screen.getByRole('button', { name: 'Open navigation' }))
     await screen.findByRole('dialog', { name: 'Navigation' })
@@ -148,7 +144,7 @@ describe('AppShell on mobile', () => {
   // SidebarTrigger isn't a Radix Sheet trigger, so the sidebar restores focus to it itself.
   it('returns focus to Open navigation when the sheet closes', async () => {
     const user = userEvent.setup()
-    renderShell()
+    await renderShell()
 
     const trigger = screen.getByRole('button', { name: 'Open navigation' })
     await user.click(trigger)

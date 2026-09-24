@@ -1,19 +1,14 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { HomeScreen } from '@/features/home'
-import { AppShell } from '@/features/shell'
 import { failOnConsoleError } from '@/test/console-guard'
-import { renderWithProviders } from '@/test/render'
+import { renderRoute } from '@/test/render'
 
 failOnConsoleError()
 
-function renderHome() {
+async function renderHome() {
   const user = userEvent.setup()
-  renderWithProviders(
-    <AppShell>
-      <HomeScreen />
-    </AppShell>,
-  )
+  // The shell reads route params and renders typed Links, so render the real route tree.
+  await renderRoute('/')
   return { user }
 }
 
@@ -52,7 +47,7 @@ describe('CreateRoomDialog', () => {
     ['the empty-state button', emptyStateTrigger],
     ['the rail + button', railTrigger],
   ])('opens from %s with its title and description', async (_label, getTrigger) => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
 
     const { dialog } = await openFrom(user, getTrigger())
 
@@ -61,7 +56,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('focuses the room name input when it opens', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
 
     const { nameInput } = await openFrom(user, emptyStateTrigger())
 
@@ -69,7 +64,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('shows a character counter that updates as you type', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const { nameInput } = await openFrom(user, emptyStateTrigger())
 
     expect(nameInput).toHaveAccessibleDescription('0/40 characters')
@@ -80,7 +75,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('stops typing at 40 characters', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const { nameInput } = await openFrom(user, emptyStateTrigger())
 
     await user.type(nameInput, 'x'.repeat(45))
@@ -90,7 +85,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('flags an empty name on submit and moves focus to the input', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const { dialog, nameInput } = await openFrom(user, emptyStateTrigger())
 
     await user.click(within(dialog).getByRole('button', { name: 'Create room' }))
@@ -103,7 +98,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('offers 12 room icons with Owl selected by default', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const { dialog, iconGroup } = await openFrom(user, emptyStateTrigger())
 
     const radios = within(iconGroup).getAllByRole('radio')
@@ -114,7 +109,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('keeps Owl selected when it is clicked again', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const { iconGroup } = await openFrom(user, emptyStateTrigger())
 
     const owl = within(iconGroup).getByRole('radio', { name: 'Owl' })
@@ -124,7 +119,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('selects Fire and updates the preview', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const { dialog, iconGroup } = await openFrom(user, emptyStateTrigger())
 
     await user.click(within(iconGroup).getByRole('radio', { name: 'Fire' }))
@@ -135,7 +130,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('moves between icons with the arrow keys', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const { iconGroup } = await openFrom(user, emptyStateTrigger())
 
     const owl = within(iconGroup).getByRole('radio', { name: 'Owl' })
@@ -166,7 +161,7 @@ describe('CreateRoomDialog', () => {
           user.click(within(dialog).getByRole('button', { name: 'Cancel' })),
       ],
     ])('closes on %s and returns focus to the trigger', async (_how, close) => {
-      const { user } = renderHome()
+      const { user } = await renderHome()
       const trigger = getTrigger()
       const { dialog } = await openFrom(user, trigger)
 
@@ -178,7 +173,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('resets the form when reopened after closing', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const trigger = emptyStateTrigger()
     const first = await openFrom(user, trigger)
     await user.click(within(first.dialog).getByRole('button', { name: 'Create room' }))
@@ -197,7 +192,7 @@ describe('CreateRoomDialog', () => {
   })
 
   it('closes after a valid submit and returns focus to the trigger', async () => {
-    const { user } = renderHome()
+    const { user } = await renderHome()
     const trigger = emptyStateTrigger()
     const { dialog, nameInput } = await openFrom(user, trigger)
 

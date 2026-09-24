@@ -444,7 +444,7 @@ function SidebarGroupLabel({
       data-slot="sidebar-group-label"
       data-sidebar="group-label"
       className={cn(
-        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium tracking-wide text-sidebar-foreground/70 uppercase ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         className
       )}
       {...props}
@@ -527,10 +527,16 @@ const sidebarMenuButtonVariants = cva(
         /** Square icon tile for the room rail. Pair with an `aria-label` and a tooltip. */
         rail: "size-10 justify-center rounded-xl p-0 [&_svg]:size-5",
       },
+      /** Rail tiles: a pill on the rail's left edge; grows on hover, full height when active. */
+      indicator: {
+        none: "",
+        pill: "relative overflow-visible before:absolute before:top-1/2 before:-left-2 before:h-0 before:w-1 before:-translate-y-1/2 before:rounded-r-full before:bg-sidebar-foreground before:transition-[height] before:duration-150 hover:before:h-3 data-active:before:h-6 motion-reduce:before:transition-none",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      indicator: "none",
     },
   }
 )
@@ -549,6 +555,7 @@ const SidebarMenuButton = React.forwardRef<
     isActive = false,
     variant = "default",
     size = "default",
+    indicator = "none",
     tooltip,
     className,
     ...props
@@ -565,7 +572,7 @@ const SidebarMenuButton = React.forwardRef<
       data-sidebar="menu-button"
       data-size={size}
       data-active={isActive}
-      className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+      className={cn(sidebarMenuButtonVariants({ variant, size, indicator }), className)}
       {...props}
     />
   )

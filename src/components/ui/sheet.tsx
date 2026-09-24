@@ -9,11 +9,14 @@ function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-function SheetTrigger({
-  ...props
-}: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
-}
+// forwardRef: React 18 drops `ref` on function components; triggers get composed via
+// Radix `asChild` (e.g. a TooltipTrigger inside a DialogTrigger) and need the ref.
+const SheetTrigger = React.forwardRef<
+  React.ComponentRef<typeof SheetPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Trigger>
+>(function SheetTrigger(props, ref) {
+  return <SheetPrimitive.Trigger ref={ref} data-slot="sheet-trigger" {...props} />
+})
 
 function SheetClose({
   ...props

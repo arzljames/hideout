@@ -42,3 +42,6 @@ if (!Element.prototype.setPointerCapture) {
 if (!Element.prototype.releasePointerCapture) {
   Element.prototype.releasePointerCapture = () => {}
 }
+
+// TanStack Router's scroll restoration calls window.scrollTo, which jsdom doesn't implement.
+window.scrollTo = () => {}
