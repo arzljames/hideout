@@ -34,6 +34,8 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        /** Narrow drag handle (e.g. reordering channels), 24px wide minimum (WCAG 2.5.8). Pair with an `aria-label`. */
+        grip: "h-7 w-6 cursor-grab touch-manipulation rounded-[min(var(--radius-md),12px)] active:cursor-grabbing",
       },
       /** `round` makes a pill/circle (e.g. a round close button with size="icon-lg"). */
       shape: {

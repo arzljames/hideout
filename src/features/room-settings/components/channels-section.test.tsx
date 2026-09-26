@@ -1,8 +1,9 @@
 import { screen, within } from '@testing-library/react'
 import { failOnConsoleError } from '@/test/console-guard'
 import { nightOwls, roomPath } from '@/test/fixtures/rooms'
-import { renderRoute, renderWithProviders } from '@/test/render'
-import { ChannelsSection } from './channels-section'
+import { roomDetailHandler } from '@/test/msw/rooms'
+import { server } from '@/test/msw/server'
+import { renderRoute } from '@/test/render'
 
 failOnConsoleError()
 
@@ -45,9 +46,10 @@ describe('Channels section', () => {
     }
   })
 
-  it('says so when a group has no channels', () => {
+  it('says so when a group has no channels', async () => {
     const textOnly = nightOwls.channels.filter((channel) => channel.type === 'text')
-    renderWithProviders(<ChannelsSection room={{ ...nightOwls, channels: textOnly }} />)
+    server.use(roomDetailHandler([{ ...nightOwls, channels: textOnly }]))
+    await renderRoute(`${roomPath(nightOwls)}/settings?section=channels`)
 
     expect(screen.queryByRole('list', { name: 'Voice channels' })).not.toBeInTheDocument()
     expect(screen.getByText('No voice channels yet')).toBeInTheDocument()

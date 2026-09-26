@@ -29,10 +29,38 @@ const roomSchema: z.ZodType<Schemas['Room']> = z.object({
   createdAt: timestamp,
 })
 
+// Every contract channel type, and no others (`satisfies` rejects missing and extra keys).
+const channelTypeSchema: z.ZodType<Schemas['ChannelType']> = z.enum({
+  text: 'text',
+  voice: 'voice',
+} satisfies { [K in Schemas['ChannelType']]: K })
+
+// Bounds from the contract, so a bad broadcast is rejected, never truncated: ChannelName is
+// 1–32 UTF-16 code units (what `.length` counts), and a room holds at most 50 live channels
+// (POST /api/rooms/{roomId}/channels).
+const CHANNEL_NAME_MAX = 32
+const CHANNELS_PER_ROOM_MAX = 50
+
+const channelSchema: z.ZodType<Schemas['Channel']> = z.object({
+  id,
+  roomId: id,
+  type: channelTypeSchema,
+  name: z.string().min(1).max(CHANNEL_NAME_MAX),
+  position: z.int(),
+})
+
 /** Events on `room:<roomId>` that this app handles. */
 export const roomEventSchemas = {
   'room:updated': z.object({ room: roomSchema }),
   'room:deleted': z.object({ id }),
+  'channel:created': z.object({ channel: channelSchema }),
+  'channel:updated': z.object({ channel: channelSchema }),
+  'channel:reordered': z.object({
+    roomId: id,
+    type: channelTypeSchema,
+    channelIds: z.array(id).max(CHANNELS_PER_ROOM_MAX),
+  }),
+  'channel:deleted': z.object({ id, roomId: id }),
 }
 
 /** Events on `user:<profileId>` that this app handles. */
