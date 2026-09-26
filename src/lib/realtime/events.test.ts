@@ -41,6 +41,18 @@ describe('handled events match the pinned contract (events.schema.json)', () => 
     }
   }
 
+  it('the Channel inside channel:created / channel:updated matches $defs.Channel', () => {
+    const channelDefinition = (contract.$defs as Record<string, EventDefinition>).Channel!
+    for (const event of ['channel:created', 'channel:updated'] as const) {
+      expect(serverEvents.room?.[event]?.properties?.channel).toEqual({ $ref: '#/$defs/Channel' })
+      const channel = (roomEventSchemas[event] as z.ZodObject).shape.channel as z.ZodType
+      expect(requiredKeys(channel)).toEqual([...(channelDefinition.required ?? [])].sort())
+      for (const key of Object.keys((channel as z.ZodObject).shape)) {
+        expect(channelDefinition.properties ?? {}).toHaveProperty(key)
+      }
+    }
+  })
+
   it('both topics are private', () => {
     expect(contract.topics.room.private).toBe(true)
     expect(contract.topics.user.private).toBe(true)
@@ -65,6 +77,53 @@ describe('parseRoomEvent', () => {
       event: 'room:deleted',
       data: { id: ROOM_ID },
     })
+  })
+
+  const CHANNEL_ID = '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f'
+  const channel = { id: CHANNEL_ID, roomId: ROOM_ID, type: 'text', name: 'general', position: 0 }
+
+  it('parses the channel events', () => {
+    expect(parseRoomEvent('channel:created', { channel })).toEqual({
+      event: 'channel:created',
+      data: { channel },
+    })
+    expect(parseRoomEvent('channel:updated', { channel })?.data).toEqual({ channel })
+    expect(
+      parseRoomEvent('channel:reordered', { roomId: ROOM_ID, type: 'voice', channelIds: [CHANNEL_ID] })
+        ?.data,
+    ).toEqual({ roomId: ROOM_ID, type: 'voice', channelIds: [CHANNEL_ID] })
+    expect(parseRoomEvent('channel:deleted', { id: CHANNEL_ID, roomId: ROOM_ID })?.data).toEqual({
+      id: CHANNEL_ID,
+      roomId: ROOM_ID,
+    })
+  })
+
+  it('drops invalid channel payloads', () => {
+    expect(parseRoomEvent('channel:created', { channel: { ...channel, type: 'stage' } })).toBeNull()
+    expect(parseRoomEvent('channel:updated', { channel: { ...channel, position: 1.5 } })).toBeNull()
+    expect(parseRoomEvent('channel:updated', { channel: { ...channel, name: undefined } })).toBeNull()
+    expect(
+      parseRoomEvent('channel:reordered', { roomId: ROOM_ID, type: 'text', channelIds: ['x'] }),
+    ).toBeNull()
+    expect(parseRoomEvent('channel:reordered', { roomId: ROOM_ID, channelIds: [] })).toBeNull()
+    expect(parseRoomEvent('channel:deleted', { id: CHANNEL_ID })).toBeNull()
+  })
+
+  it('bounds channel names (1–32) and reorder lists (50 ids), rejecting rather than truncating', () => {
+    const named = (name: string) => parseRoomEvent('channel:updated', { channel: { ...channel, name } })
+    expect(named('a'.repeat(32))?.data).toEqual({ channel: { ...channel, name: 'a'.repeat(32) } })
+    expect(named('a'.repeat(33))).toBeNull()
+    expect(named('')).toBeNull()
+    expect(parseRoomEvent('channel:created', { channel: { ...channel, name: 'x'.repeat(10_000) } })).toBeNull()
+
+    const reordered = (count: number) =>
+      parseRoomEvent('channel:reordered', {
+        roomId: ROOM_ID,
+        type: 'text',
+        channelIds: Array.from({ length: count }, () => CHANNEL_ID),
+      })
+    expect(reordered(50)).not.toBeNull()
+    expect(reordered(51)).toBeNull()
   })
 
   it('drops invalid payloads and unknown events', () => {

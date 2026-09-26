@@ -1,4 +1,4 @@
-import type { UseFormSetError } from 'react-hook-form'
+import type { FieldValues, Path, UseFormSetError } from 'react-hook-form'
 import { ApiError } from '@/lib/api/client'
 import { OFFLINE_MESSAGE } from './api'
 import type { RoomEmoji } from './room-emojis'
@@ -17,6 +17,26 @@ function fieldForPath(path: string): keyof RoomFormValues | null {
 }
 
 /**
+ * Put a 422's field errors on a form, using `fieldForPath` to map each detail path (e.g.
+ * `body.name`) to a field. The first mapped field gets focus. Returns true when at least one
+ * field got an error, so the caller can fall back to a form-level message otherwise.
+ */
+export function setApiFieldErrors<T extends FieldValues>(
+  setError: UseFormSetError<T>,
+  error: ApiError,
+  fieldForPath: (path: string) => Path<T> | null,
+): boolean {
+  let focused = false
+  for (const detail of error.details ?? []) {
+    const field = fieldForPath(detail.path)
+    if (!field) continue
+    setError(field, { type: 'server', message: detail.message }, { shouldFocus: !focused })
+    focused = true
+  }
+  return focused
+}
+
+/**
  * Put a 422's field errors on the form. Returns true when at least one field got an error, so
  * the caller can fall back to a form-level message otherwise.
  */
@@ -26,14 +46,7 @@ export function setRoomFieldErrors<T extends RoomFormValues>(
 ): boolean {
   // The generic keeps callers' own form types; both fields exist on every T.
   const set = setError as unknown as UseFormSetError<RoomFormValues>
-  let focused = false
-  for (const detail of error.details ?? []) {
-    const field = fieldForPath(detail.path)
-    if (!field) continue
-    set(field, { type: 'server', message: detail.message }, { shouldFocus: !focused })
-    focused = true
-  }
-  return focused
+  return setApiFieldErrors(set, error, fieldForPath)
 }
 
 /** Form-level copy for a failed room write that isn't a field error. */
