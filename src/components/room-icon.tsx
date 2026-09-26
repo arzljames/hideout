@@ -5,6 +5,7 @@ const roomIconVariants = cva('flex shrink-0 items-center justify-center bg-muted
   variants: {
     size: {
       sm: 'size-8 rounded-lg text-base',
+      md: 'size-10 rounded-lg text-xl',
       lg: 'size-14 rounded-xl text-3xl',
     },
   },

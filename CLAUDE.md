@@ -94,7 +94,7 @@ Done means: `npm run typecheck && npm run lint && npm run test` pass, and `npm r
 
 - **File-based routes** in `src/routes/`. `routeTree.gen.ts` is generated; never edit it.
 - **Router context** provides `queryClient`. Auth state is the `meQueryOptions` query (`null` = signed out), not a context field. Declare it with `createRootRouteWithContext`.
-- **Auth guard:** `_app.tsx` runs `beforeLoad` → `context.queryClient.ensureQueryData(meQueryOptions)`; on `null` (401), `throw redirect({ to: '/sign-in', search: { auth_error } })`, forwarding a validated `auth_error` if present. The API can't return to a specific page, so there's no `redirect` param.
+- **Auth guard:** signed-in layouts (`_app`, `_focus`) use `beforeLoad: requireViewer` from `features/auth`, which runs `context.queryClient.ensureQueryData(meQueryOptions)`; on `null` (401), `throw redirect({ to: '/sign-in', search: { auth_error } })`, forwarding a validated `auth_error` if present. The API can't return to a specific page, so there's no `redirect` param.
 - **Data loading:** loaders call `context.queryClient.ensureQueryData(...)` with `queryOptions` exported from the feature's `api.ts`; components read with `useSuspenseQuery` using the same options. Never fetch in loaders without going through TanStack Query.
 - **Search params** are validated with `validateSearch` (Zod). Example: `/sign-in` and `/` take `auth_error?` (an `AuthRedirectError` code; unknown codes show a generic message).
 - **Navigation** only through typed `Link`, `useNavigate`, and `redirect`. No string-built URLs, no `window.location`/`window.open` except Steam sign-in (`features/auth/steam-popup.ts`).

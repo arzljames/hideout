@@ -51,6 +51,15 @@ describe('auth routes', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('guards the full-screen room settings page too', async () => {
+    signedOut()
+
+    const { router } = await renderRoute('/rooms/night-owls/settings')
+
+    expect(router.state.location.pathname).toBe('/sign-in')
+    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+  })
+
   it('carries a failed sign-in to /sign-in, explains it, and strips auth_error from the URL', async () => {
     signedOut()
 

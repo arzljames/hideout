@@ -38,7 +38,11 @@ describe('AppShell on desktop', () => {
     await renderShell()
 
     const sections = screen.getByRole('navigation', { name: 'Home sections' })
-    expect(within(sections).getByRole('button', { name: 'Invites' })).toBeInTheDocument()
+    // Invites is a link to the inbox now, named with its pending count.
+    expect(within(sections).getByRole('link', { name: 'Invites 3 pending' })).toHaveAttribute(
+      'href',
+      '/invites',
+    )
   })
 
   it('shows the signed-in user with presence and labelled account actions', async () => {

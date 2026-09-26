@@ -159,7 +159,8 @@ describe('nav panel', () => {
     await renderRoute('/')
 
     expect(screen.getByRole('navigation', { name: 'Home sections' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Invites' })).toBeInTheDocument()
+    // Invites is a link to the inbox now, named with its pending count.
+    expect(screen.getByRole('link', { name: 'Invites 3 pending' })).toHaveAttribute('href', '/invites')
     expect(screen.queryByRole('navigation', { name: 'Channels' })).not.toBeInTheDocument()
   })
 

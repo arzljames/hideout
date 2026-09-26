@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router'
-import { render, type RenderOptions } from '@testing-library/react'
+import { act, render, type RenderOptions, type RenderResult } from '@testing-library/react'
 import { StrictMode, type ReactElement } from 'react'
 import { registerSessionExpiry } from '@/features/auth'
 import { routeTree } from '@/routeTree.gen'
@@ -53,10 +53,15 @@ export async function renderRoute(
       <RouterProvider router={router} />
     </QueryClientProvider>
   )
+  // Async act: the router keeps settling after the first render (e.g. loading a lazily split
+  // notFound/error component), and those updates must land inside act too.
   // `strict`: render like main.tsx, where StrictMode double-runs effects on mount.
-  const result = render(strict ? <StrictMode>{app}</StrictMode> : app, {
-    wrapper: TestProviders,
-    ...options,
+  let result!: RenderResult
+  await act(async () => {
+    result = render(strict ? <StrictMode>{app}</StrictMode> : app, {
+      wrapper: TestProviders,
+      ...options,
+    })
   })
 
   return { ...result, router, queryClient }

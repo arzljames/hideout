@@ -10,13 +10,14 @@ function AlertDialog({
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
 }
 
-function AlertDialogTrigger({
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
-  return (
-    <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
-  )
-}
+// forwardRef: React 18 drops `ref` on function components; triggers get composed via
+// Radix `asChild` (e.g. a TooltipTrigger inside an AlertDialogTrigger) and need the ref.
+const AlertDialogTrigger = React.forwardRef<
+  React.ComponentRef<typeof AlertDialogPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Trigger>
+>(function AlertDialogTrigger(props, ref) {
+  return <AlertDialogPrimitive.Trigger ref={ref} data-slot="alert-dialog-trigger" {...props} />
+})
 
 function AlertDialogPortal({
   ...props
@@ -147,41 +148,40 @@ function AlertDialogDescription({
   )
 }
 
-function AlertDialogAction({
-  className,
-  variant = "default",
-  size = "default",
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Action> &
-  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+// forwardRef: React 18 drops `ref` on function components; callers may focus these.
+const AlertDialogAction = React.forwardRef<
+  React.ComponentRef<typeof AlertDialogPrimitive.Action>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> &
+    Pick<React.ComponentProps<typeof Button>, "variant" | "size">
+>(function AlertDialogAction({ className, variant = "default", size = "default", ...props }, ref) {
   return (
     <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Action
+        ref={ref}
         data-slot="alert-dialog-action"
         className={cn(className)}
         {...props}
       />
     </Button>
   )
-}
+})
 
-function AlertDialogCancel({
-  className,
-  variant = "outline",
-  size = "default",
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Cancel> &
-  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+const AlertDialogCancel = React.forwardRef<
+  React.ComponentRef<typeof AlertDialogPrimitive.Cancel>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel> &
+    Pick<React.ComponentProps<typeof Button>, "variant" | "size">
+>(function AlertDialogCancel({ className, variant = "outline", size = "default", ...props }, ref) {
   return (
     <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Cancel
+        ref={ref}
         data-slot="alert-dialog-cancel"
         className={cn(className)}
         {...props}
       />
     </Button>
   )
-}
+})
 
 export {
   AlertDialog,

@@ -29,5 +29,5 @@ dist-ssr
 /blob-report/
 /playwright/.cache/
 
-# Vitest reporter output
+# Vitest JSON reporter output
 .vitest/

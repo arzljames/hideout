@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { RegisteredRouter } from '@tanstack/react-router'
 import { setUnauthenticatedHandler } from '@/lib/api/client'
 import { endSession, meQueryOptions } from './api'
+import { SIGNED_IN_LAYOUT_IDS } from './require-viewer'
 
 type SessionRouter = Pick<RegisteredRouter, 'navigate' | 'invalidate' | 'state'>
 
@@ -12,7 +13,9 @@ type SessionRouter = Pick<RegisteredRouter, 'navigate' | 'invalidate' | 'state'>
  */
 export function registerSessionExpiry(queryClient: QueryClient, router: SessionRouter) {
   setUnauthenticatedHandler(() => {
-    const inApp = router.state.matches.some((match) => match.routeId === '/_app')
+    const inApp = router.state.matches.some((match) =>
+      (SIGNED_IN_LAYOUT_IDS as readonly string[]).includes(match.routeId),
+    )
     if (!inApp) {
       queryClient.setQueryData(meQueryOptions.queryKey, null)
       void router.invalidate()

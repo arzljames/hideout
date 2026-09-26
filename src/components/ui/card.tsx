@@ -8,8 +8,11 @@ function Card({
   ...props
 }: React.ComponentProps<"div"> & {
   size?: "default" | "sm"
-  /** `active` highlights the card with a primary ring (e.g. a speaking participant). */
-  tone?: "default" | "active"
+  /**
+   * `active` highlights the card with a primary ring (e.g. a speaking participant);
+   * `danger` gives it a destructive border (e.g. a "Delete room" zone).
+   */
+  tone?: "default" | "active" | "danger"
 }) {
   return (
     <div
@@ -17,7 +20,7 @@ function Card({
       data-size={size}
       data-tone={tone}
       className={cn(
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[tone=active]:ring-2 data-[tone=active]:ring-primary data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[tone=active]:ring-2 data-[tone=active]:ring-primary data-[tone=danger]:ring-destructive/50 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
         className
       )}
       {...props}
