@@ -12,7 +12,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
-    "gen:api": "openapi-typescript http://localhost:3001/api/contract/openapi.json -o src/lib/api/schema.gen.ts"
+    "gen:api": "openapi-typescript http://localhost:3001/api/contract/openapi.json -o src/lib/api/schema.gen.ts",
+    "gen:events": "node scripts/gen-events.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { failOnConsoleError } from '@/test/console-guard'
+import { nightOwls, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute } from '@/test/render'
 
 failOnConsoleError()
@@ -11,7 +12,7 @@ const INVITE_URL = 'https://hideout.gg/i/7Hq2xK'
 async function openInvite() {
   // userEvent.setup() installs a clipboard stub on navigator.clipboard for this test.
   const user = userEvent.setup()
-  await renderRoute('/rooms/night-owls/general')
+  await renderRoute(roomPath(nightOwls, 'general'))
   const trigger = screen.getByRole('button', { name: 'Invite' })
   await user.click(trigger)
   const dialog = await screen.findByRole('dialog', { name: 'Invite people to Night Owls' })

@@ -4,12 +4,13 @@ import { cn } from '@/lib/utils'
 import { DeleteRoomDialog } from './delete-room-dialog'
 
 interface DangerZoneProps {
+  roomId: string
   roomName: string
   className?: string
 }
 
 /** Owner-only "Delete room" panel. */
-export function DangerZone({ roomName, className }: DangerZoneProps) {
+export function DangerZone({ roomId, roomName, className }: DangerZoneProps) {
   const titleId = useId()
 
   return (
@@ -23,7 +24,7 @@ export function DangerZone({ roomName, className }: DangerZoneProps) {
             This deletes every channel and message for everyone. It can&apos;t be undone. Only the
             owner can do this.
           </p>
-          <DeleteRoomDialog roomName={roomName} />
+          <DeleteRoomDialog roomId={roomId} roomName={roomName} />
         </CardContent>
       </Card>
     </section>

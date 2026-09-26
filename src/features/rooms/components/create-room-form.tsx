@@ -1,5 +1,7 @@
+import { CircleAlert, LoaderCircle } from 'lucide-react'
 import { useId } from 'react'
-import { Controller, useWatch, type UseFormReturn } from 'react-hook-form'
+import { Controller, useFormState, useWatch, type UseFormReturn } from 'react-hook-form'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { DialogClose, DialogFooter } from '@/components/ui/dialog'
 import { Field, FieldError, FieldGroup, FieldLabel, FieldTitle } from '@/components/ui/field'
@@ -11,19 +13,24 @@ import { RoomEmojiPicker } from './room-emoji-picker'
 interface CreateRoomFormProps {
   form: UseFormReturn<CreateRoomValues>
   onSubmit: (values: CreateRoomValues) => void
+  /** The create request is in flight: submit is disabled and shows a spinner. */
+  pending?: boolean
   className?: string
 }
 
 /** Name + icon fields and the dialog footer. The form state is owned by `CreateRoomDialog`. */
-export function CreateRoomForm({ form, onSubmit, className }: CreateRoomFormProps) {
+export function CreateRoomForm({ form, onSubmit, pending = false, className }: CreateRoomFormProps) {
   const ids = {
     name: useId(),
     counter: useId(),
     nameError: useId(),
     iconTitle: useId(),
     iconHelp: useId(),
+    iconError: useId(),
   }
   const name = useWatch({ control: form.control, name: 'name' })
+  const { errors } = useFormState({ control: form.control })
+  const formError = errors.root?.server?.message
 
   return (
     <form
@@ -64,8 +71,12 @@ export function CreateRoomForm({ form, onSubmit, className }: CreateRoomFormProp
         <Controller
           name="emoji"
           control={form.control}
-          render={({ field }) => (
-            <Field aria-labelledby={ids.iconTitle} aria-describedby={ids.iconHelp}>
+          render={({ field, fieldState }) => (
+            <Field
+              data-invalid={fieldState.invalid}
+              aria-labelledby={ids.iconTitle}
+              aria-describedby={fieldState.invalid ? `${ids.iconError} ${ids.iconHelp}` : ids.iconHelp}
+            >
               <div className="flex items-center justify-between gap-2">
                 <FieldTitle id={ids.iconTitle}>Icon</FieldTitle>
                 <span id={ids.iconHelp} className="text-xs text-muted-foreground">
@@ -73,18 +84,29 @@ export function CreateRoomForm({ form, onSubmit, className }: CreateRoomFormProp
                 </span>
               </div>
               <RoomEmojiPicker value={field.value} onValueChange={field.onChange} />
+              {fieldState.invalid && <FieldError id={ids.iconError} errors={[fieldState.error]} />}
             </Field>
           )}
         />
       </FieldGroup>
 
+      {formError && (
+        <Alert variant="destructive">
+          <CircleAlert aria-hidden="true" />
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
+
       <DialogFooter>
         <DialogClose asChild>
-          <Button type="button" variant="ghost">
+          <Button type="button" variant="ghost" disabled={pending}>
             Cancel
           </Button>
         </DialogClose>
-        <Button type="submit">Create room</Button>
+        <Button type="submit" disabled={pending}>
+          {pending && <LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" />}
+          Create room
+        </Button>
       </DialogFooter>
     </form>
   )

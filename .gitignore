@@ -31,3 +31,6 @@ dist-ssr
 
 # Vitest JSON reporter output
 .vitest/
+
+# TanStack router plugin temp files
+.tanstack/

@@ -25,7 +25,7 @@ function isNonEmptyTextField(target: Element | null): boolean {
  * the key comes from inside one, during IME composition, and in a text field that has text
  * (Esc from an empty field still closes).
  */
-export function useEscapeToClose(roomId: string, channelId: string) {
+export function useEscapeToClose(roomId: string, channelId: string | null) {
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -34,7 +34,11 @@ export function useEscapeToClose(roomId: string, channelId: string) {
       const target = event.target instanceof Element ? event.target : null
       if (target?.closest(LAYER_SELECTOR) || document.querySelector(LAYER_SELECTOR)) return
       if (isNonEmptyTextField(target)) return
-      void navigate({ to: '/rooms/$roomId/$channelId', params: { roomId, channelId } })
+      if (channelId) {
+        void navigate({ to: '/rooms/$roomId/$channelId', params: { roomId, channelId } })
+      } else {
+        void navigate({ to: '/rooms/$roomId', params: { roomId } })
+      }
     }
 
     document.addEventListener('keydown', onKeyDown)

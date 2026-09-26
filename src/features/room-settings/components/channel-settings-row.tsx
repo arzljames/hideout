@@ -10,7 +10,7 @@ interface ChannelSettingsRowProps {
 
 /** A channel with inert Rename and Delete actions. */
 export function ChannelSettingsRow({ channel, className }: ChannelSettingsRowProps) {
-  const Icon = channel.kind === 'text' ? Hash : Volume2
+  const Icon = channel.type === 'text' ? Hash : Volume2
 
   return (
     <li className={cn('flex items-center gap-2 py-2', className)}>

@@ -1,4 +1,5 @@
-import { getRoomChannel, getSampleRoom } from '@/features/rooms'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { roomQueryOptions } from '@/features/rooms'
 import { ChannelNotFound } from './channel-not-found'
 import { TextChannelView } from './text-channel-view'
 import { VoiceChannelView } from './voice-channel-view'
@@ -8,23 +9,22 @@ interface ChannelScreenProps {
   channelId: string
 }
 
-/** Picks the text or voice view for a channel. The route loader has already 404'd unknowns. */
+/** Picks the text or voice view for a channel, or "channel not found" for an unknown id. */
 export function ChannelScreen({ roomId, channelId }: ChannelScreenProps) {
-  // TODO(api): useSuspenseQuery(roomQueryOptions(roomId)).
-  const room = getSampleRoom(roomId)
-  const channel = room && getRoomChannel(room, channelId)
-  if (!room) return null
+  const { data: room } = useSuspenseQuery(roomQueryOptions(roomId))
+  const channel = room.channels.find((item) => item.id === channelId)
+
   if (!channel) {
     return (
       <ChannelNotFound
-        roomId={room.id}
-        roomName={room.name}
+        roomId={room.room.id}
+        roomName={room.room.name}
         defaultChannelId={room.defaultChannelId}
       />
     )
   }
 
-  return channel.kind === 'text' ? (
+  return channel.type === 'text' ? (
     <TextChannelView key={channel.id} room={room} channel={channel} />
   ) : (
     <VoiceChannelView key={channel.id} room={room} channel={channel} />

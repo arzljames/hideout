@@ -4,7 +4,10 @@ import { act } from 'react'
 import { http, HttpResponse } from 'msw'
 import { useVoiceStore } from '@/features/voice'
 import { useVoiceSession } from '@/stores/voice-session'
+import { getRealtimeAccessToken } from '@/lib/realtime/access-token'
+import { getRealtimeStatus } from '@/lib/realtime/connection'
 import { failOnConsoleError } from '@/test/console-guard'
+import { fakeSupabase } from '@/test/fake-supabase'
 import { server } from '@/test/msw/server'
 import { renderRoute } from '@/test/render'
 
@@ -104,6 +107,21 @@ describe('AccountMenu', () => {
       expect(queryClient.getQueryData(['auth', 'me'])).toBeNull()
       expect(useVoiceStore.getState().muted).toBe(false)
       expect(useVoiceSession.getState()).toMatchObject({ status: 'idle', token: null })
+    })
+
+    it('stops Realtime: leaves every topic, disconnects, and forgets the token', async () => {
+      respondToLogout('/api/auth/logout', 204)
+      const { user, menu } = await openAccountMenu()
+      await vi.waitFor(() => expect(getRealtimeStatus()).toBe('ready'))
+      expect(fakeSupabase.channels.length).toBeGreaterThan(0)
+
+      await user.click(within(menu).getByRole('menuitem', { name: 'Sign out' }))
+
+      expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+      expect(getRealtimeStatus()).toBe('idle')
+      expect(getRealtimeAccessToken()).toBeNull()
+      expect(fakeSupabase.realtime.disconnect).toHaveBeenCalled()
+      expect(fakeSupabase.channels).toEqual([])
     })
 
     it('still ends on the sign-in screen when the session had already expired (401)', async () => {

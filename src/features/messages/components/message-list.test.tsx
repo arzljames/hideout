@@ -1,13 +1,32 @@
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
-import { renderRoute } from '@/test/render'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { renderWithProviders } from '@/test/render'
+import { getSampleMessages, getSampleTyping, sampleViewerId } from '../sample-messages'
+import { Composer } from './composer'
+import { MessageList } from './message-list'
+import { TypingIndicator } from './typing-indicator'
 
 failOnConsoleError()
 
+// Rooms don't render messages until the messages API is wired, so the list is tested on its
+// own with the design sample messages, followed by the composer as in a text channel.
 async function renderGeneral() {
   const user = userEvent.setup()
-  await renderRoute('/rooms/night-owls/general')
+  renderWithProviders(
+    <TooltipProvider>
+      <div className="flex h-svh flex-col">
+        <MessageList
+          channelName="general"
+          messages={getSampleMessages('night-owls', 'general')}
+          viewerId={sampleViewerId}
+        />
+        <TypingIndicator names={getSampleTyping('night-owls', 'general')} />
+        <Composer channelName="general" />
+      </div>
+    </TooltipProvider>,
+  )
   const log = screen.getByRole('log', { name: 'Messages in #general' })
   return { user, log }
 }

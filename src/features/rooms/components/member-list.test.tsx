@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
+import { nightOwls, raidNight, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute } from '@/test/render'
 import { withViewportWidth } from '@/test/viewport'
 
@@ -16,40 +17,43 @@ function memberRow(list: HTMLElement, name: string) {
 }
 
 describe('MemberList on desktop', () => {
-  it('splits members into Online — 5 and Offline — 2', async () => {
-    await renderRoute('/rooms/night-owls/general')
+  it('groups members into Owner — 1, Admins — 1 and Members — 5', async () => {
+    await renderRoute(roomPath(nightOwls, 'general'))
 
     const members = screen.getByRole('complementary', { name: 'Members' })
-    const online = within(members).getByRole('region', { name: 'Online — 5' })
-    const offline = within(members).getByRole('region', { name: 'Offline — 2' })
-    expect(within(online).getByRole('heading', { name: 'Online — 5' })).toBeInTheDocument()
-    expect(within(online).getAllByRole('listitem')).toHaveLength(5)
-    expect(within(offline).getAllByRole('listitem')).toHaveLength(2)
-    expect(memberRow(offline, 'Theo')).toHaveTextContent('Offline')
-    expect(memberRow(offline, 'Sam')).toHaveTextContent('Offline')
+    const owner = within(members).getByRole('region', { name: 'Owner — 1' })
+    const admins = within(members).getByRole('region', { name: 'Admins — 1' })
+    const regular = within(members).getByRole('region', { name: 'Members — 5' })
+    expect(memberRow(owner, 'Arzl')).toBeInTheDocument()
+    expect(memberRow(admins, 'Maya')).toBeInTheDocument()
+    expect(
+      within(regular)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['AAlex', 'JJun', 'PPriya', 'SSam', 'TTheo'])
   })
 
-  it('shows the Owner and Admin role badges and marks you', async () => {
-    await renderRoute('/rooms/night-owls/general')
+  it('leaves out empty groups', async () => {
+    await renderRoute(roomPath(raidNight, 'lobby'))
 
     const members = screen.getByRole('complementary', { name: 'Members' })
-    expect(memberRow(members, 'Arzl')).toHaveTextContent('Owner')
+    expect(within(members).getAllByRole('heading').map((heading) => heading.textContent)).toEqual([
+      'Owner — 1',
+      'Admins — 1',
+    ])
+  })
+
+  it('marks you with "(you)", once', async () => {
+    await renderRoute(roomPath(nightOwls, 'general'))
+
+    const members = screen.getByRole('complementary', { name: 'Members' })
     expect(memberRow(members, 'Arzl')).toHaveTextContent('(you)')
-    expect(memberRow(members, 'Maya')).toHaveTextContent('Admin')
-    expect(within(members).getAllByText(/^(Owner|Admin)$/)).toHaveLength(2)
-  })
-
-  it('shows what members are playing, and Online otherwise', async () => {
-    await renderRoute('/rooms/night-owls/general')
-
-    const members = screen.getByRole('complementary', { name: 'Members' })
-    expect(memberRow(members, 'Maya')).toHaveTextContent('Playing Elden Ring')
-    expect(memberRow(members, 'Alex')).toHaveTextContent('Online')
+    expect(within(members).getAllByText('(you)')).toHaveLength(1)
   })
 
   it('hides and shows the panel with the members toggle, reflected by aria-pressed', async () => {
     const user = userEvent.setup()
-    await renderRoute('/rooms/night-owls/general')
+    await renderRoute(roomPath(nightOwls, 'general'))
 
     const toggle = screen.getByRole('button', { name: 'Show members' })
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
@@ -65,7 +69,7 @@ describe('MemberList on desktop', () => {
 
   it('keeps the panel hidden when switching channels', async () => {
     const user = userEvent.setup()
-    await renderRoute('/rooms/night-owls/general')
+    await renderRoute(roomPath(nightOwls, 'general'))
 
     await user.click(screen.getByRole('button', { name: 'Show members' }))
     const channels = screen.getByRole('navigation', { name: 'Channels' })
@@ -85,7 +89,7 @@ describe('MemberList on mobile', () => {
 
   it('opens the members in a sheet from the toggle and returns focus on Escape', async () => {
     const user = userEvent.setup()
-    await renderRoute('/rooms/night-owls/general')
+    await renderRoute(roomPath(nightOwls, 'general'))
 
     expect(screen.queryByRole('complementary', { name: 'Members' })).not.toBeInTheDocument()
     const toggle = screen.getByRole('button', { name: 'Show members' })
@@ -96,7 +100,7 @@ describe('MemberList on mobile', () => {
     const sheet = await screen.findByRole('dialog', { name: 'Members' })
     expect(sheet).toHaveAccessibleDescription('People in Night Owls')
     const members = within(sheet).getByRole('complementary', { name: 'Members' })
-    expect(within(members).getByRole('region', { name: 'Online — 5' })).toBeInTheDocument()
+    expect(within(members).getByRole('region', { name: 'Members — 5' })).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
 

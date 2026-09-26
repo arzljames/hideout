@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { requireViewer, useSessionGuard } from '@/features/auth'
+import { useRealtimeConnection, useUserEvents } from '@/features/realtime'
 import { AppErrorScreen, AppNotFoundScreen } from '@/features/shell'
 
 /** Full-screen pages without the app shell (e.g. Room settings). */
@@ -14,6 +15,9 @@ export const Route = createFileRoute('/_focus')({
 
 function FocusLayout() {
   useSessionGuard()
+  const { me } = Route.useRouteContext()
+  useRealtimeConnection(me.id)
+  useUserEvents(me.id)
 
   return (
     <TooltipProvider>

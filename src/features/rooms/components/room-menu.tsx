@@ -10,11 +10,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { getViewerRole, type Room } from '../sample-room'
+import type { RoomDetail } from '../types'
 import { InviteDialog } from './invite-dialog'
 
 interface RoomMenuProps {
-  room: Room
+  room: RoomDetail
   className?: string
 }
 
@@ -36,7 +36,7 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
             variant="ghost"
             className={cn('w-full justify-between', className)}
           >
-            <span className="truncate font-semibold">{room.name}</span>
+            <span className="truncate font-semibold">{room.room.name}</span>
             <ChevronDown aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
@@ -61,9 +61,9 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
           </DropdownMenuItem>
           {/* Only the owner and admins can change settings; members don't see the item. */}
           {/* UI-only gate; hideout-api must enforce the role on every settings mutation. */}
-          {getViewerRole(room) !== 'member' && (
+          {room.myRole !== 'member' && (
             <DropdownMenuItem asChild>
-              <Link to="/rooms/$roomId/settings" params={{ roomId: room.id }}>
+              <Link to="/rooms/$roomId/settings" params={{ roomId: room.room.id }}>
                 <Settings aria-hidden="true" />
                 Room settings
               </Link>
@@ -79,7 +79,7 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
       </DropdownMenu>
 
       <InviteDialog
-        roomName={room.name}
+        roomName={room.room.name}
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         returnFocusRef={triggerRef}

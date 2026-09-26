@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { failOnConsoleError } from '@/test/console-guard'
-import { getSampleRoom } from '@/features/rooms'
+import { nightOwls, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute, renderWithProviders } from '@/test/render'
 import { ChannelsSection } from './channels-section'
 
@@ -8,7 +8,7 @@ failOnConsoleError()
 
 describe('Channels section', () => {
   it('groups channels into labelled text and voice lists', async () => {
-    await renderRoute('/rooms/night-owls/settings?section=channels')
+    await renderRoute(`${roomPath(nightOwls)}/settings?section=channels`)
 
     expect(screen.getByRole('heading', { level: 1, name: 'Channels' })).toBeInTheDocument()
     const text = screen.getByRole('list', { name: 'Text channels' })
@@ -27,7 +27,7 @@ describe('Channels section', () => {
   })
 
   it('has labelled Rename and Delete buttons for every channel', async () => {
-    await renderRoute('/rooms/night-owls/settings?section=channels')
+    await renderRoute(`${roomPath(nightOwls)}/settings?section=channels`)
 
     for (const name of ['general', 'clips', 'planning', 'voice', 'late night']) {
       expect(screen.getByRole('button', { name: `Rename ${name}` })).toBeInTheDocument()
@@ -36,7 +36,7 @@ describe('Channels section', () => {
   })
 
   it('has a Create channel button in each group', async () => {
-    await renderRoute('/rooms/night-owls/settings?section=channels')
+    await renderRoute(`${roomPath(nightOwls)}/settings?section=channels`)
 
     expect(screen.getAllByRole('button', { name: 'Create channel' })).toHaveLength(2)
     for (const group of ['Text channels', 'Voice channels']) {
@@ -46,11 +46,8 @@ describe('Channels section', () => {
   })
 
   it('says so when a group has no channels', () => {
-    const room = getSampleRoom('night-owls')
-    if (!room) throw new Error('sample room missing')
-    renderWithProviders(
-      <ChannelsSection room={{ ...room, channels: room.channels.filter((c) => c.kind === 'text') }} />,
-    )
+    const textOnly = nightOwls.channels.filter((channel) => channel.type === 'text')
+    renderWithProviders(<ChannelsSection room={{ ...nightOwls, channels: textOnly }} />)
 
     expect(screen.queryByRole('list', { name: 'Voice channels' })).not.toBeInTheDocument()
     expect(screen.getByText('No voice channels yet')).toBeInTheDocument()

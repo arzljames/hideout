@@ -1,13 +1,14 @@
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
+import { nightOwls, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute } from '@/test/render'
 
 failOnConsoleError()
 
 async function openSettings() {
   const user = userEvent.setup()
-  await renderRoute('/rooms/night-owls/general')
+  await renderRoute(roomPath(nightOwls, 'general'))
   const trigger = screen.getByRole('button', { name: 'Voice settings' })
   await user.click(trigger)
   const dialog = await screen.findByRole('dialog', { name: 'Voice settings' })

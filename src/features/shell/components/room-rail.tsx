@@ -1,6 +1,5 @@
 import { Link, useMatchRoute, useParams } from '@tanstack/react-router'
 import { Inbox, Plus } from 'lucide-react'
-import { RoomIcon } from '@/components/room-icon'
 import { Badge } from '@/components/ui/badge'
 import {
   SidebarMenu,
@@ -10,8 +9,9 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { usePendingInviteCount } from '@/features/invites'
-import { CreateRoomDialog, sampleRooms } from '@/features/rooms'
+import { CreateRoomDialog } from '@/features/rooms'
 import { cn } from '@/lib/utils'
+import { RoomRailRooms } from './room-rail-rooms'
 
 interface RoomRailProps {
   className?: string
@@ -30,8 +30,6 @@ export function RoomRail({ className }: RoomRailProps) {
   // Home covers the Home sections too (Invites), so its tile stays highlighted there.
   const isHome = Boolean(matchRoute({ to: '/' }) || matchRoute({ to: '/invites' }))
   const { roomId } = useParams({ strict: false })
-  // TODO(api): rooms from the rooms query.
-  const rooms = sampleRooms
   const pendingInvites = usePendingInviteCount()
   const homeLabel =
     pendingInvites > 0
@@ -70,21 +68,7 @@ export function RoomRail({ className }: RoomRailProps) {
       <SidebarSeparator className="mx-auto my-2 w-6" />
 
       <SidebarMenu className="items-center gap-2">
-        {rooms.map((room) => (
-          <SidebarMenuItem key={room.id}>
-            <SidebarMenuButton
-              asChild
-              size="rail"
-              indicator="pill"
-              isActive={room.id === roomId}
-              tooltip={railTooltip(room.name)}
-            >
-              <Link to="/rooms/$roomId" params={{ roomId: room.id }} aria-label={room.name}>
-                <RoomIcon emoji={room.emoji} size="sm" />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
+        <RoomRailRooms activeRoomId={roomId} railTooltip={railTooltip} />
 
         <SidebarMenuItem>
           <CreateRoomDialog>

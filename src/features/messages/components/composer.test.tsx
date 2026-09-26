@@ -1,13 +1,14 @@
 import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
+import { nightOwls, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute } from '@/test/render'
 
 failOnConsoleError()
 
 async function renderComposer() {
   const user = userEvent.setup()
-  await renderRoute('/rooms/night-owls/general')
+  await renderRoute(roomPath(nightOwls, 'general'))
   const composer = screen.getByRole('textbox', { name: 'Message #general' })
   return { user, composer }
 }
@@ -113,7 +114,7 @@ describe('Composer', () => {
   })
 
   it('labels the composer with the open channel', async () => {
-    await renderRoute('/rooms/night-owls/clips')
+    await renderRoute(roomPath(nightOwls, 'clips'))
 
     expect(screen.getByRole('textbox', { name: 'Message #clips' })).toBeInTheDocument()
   })

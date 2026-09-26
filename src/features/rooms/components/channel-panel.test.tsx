@@ -1,6 +1,7 @@
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
+import { nightOwls, pitLane, raidNight, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute } from '@/test/render'
 import { withViewportWidth } from '@/test/viewport'
 
@@ -8,18 +9,9 @@ failOnConsoleError()
 
 async function renderGeneral() {
   const user = userEvent.setup()
-  const result = await renderRoute('/rooms/night-owls/general')
+  const result = await renderRoute(roomPath(nightOwls, 'general'))
   const channels = screen.getByRole('navigation', { name: 'Channels' })
   return { user, channels, ...result }
-}
-
-/** The participant row under a voice channel that contains `name`. */
-function participantRow(list: HTMLElement, name: string) {
-  const row = within(list)
-    .getAllByRole('listitem')
-    .find((item) => within(item).queryByText(name, { exact: false }))
-  if (!row) throw new Error(`No participant row for ${name}`)
-  return row
 }
 
 describe('ChannelPanel', () => {
@@ -29,16 +21,40 @@ describe('ChannelPanel', () => {
     const text = within(channels).getByRole('list', { name: 'Text channels' })
     expect(within(text).getAllByRole('link').map((link) => link.textContent?.trim())).toEqual([
       'general',
-      'clips (unread)',
+      'clips',
       'planning',
     ])
 
     const voice = within(channels).getByRole('list', { name: 'Voice channels' })
-    expect(within(voice).getByRole('link', { name: 'voice (connected)' })).toBeInTheDocument()
-    expect(within(voice).getByRole('link', { name: 'late night' })).toBeInTheDocument()
+    expect(within(voice).getAllByRole('link').map((link) => link.textContent?.trim())).toEqual([
+      'voice',
+      'late night',
+    ])
+    expect(within(voice).getByRole('link', { name: 'late night' })).toHaveAttribute(
+      'href',
+      roomPath(nightOwls, 'late night'),
+    )
+  })
+
+  it('offers Create channel actions to the owner', async () => {
+    const { channels } = await renderGeneral()
 
     expect(within(channels).getByRole('button', { name: 'Create text channel' })).toBeInTheDocument()
     expect(within(channels).getByRole('button', { name: 'Create voice channel' })).toBeInTheDocument()
+  })
+
+  it('offers Create channel actions to an admin', async () => {
+    await renderRoute(roomPath(raidNight, 'lobby'))
+    const channels = screen.getByRole('navigation', { name: 'Channels' })
+
+    expect(within(channels).getByRole('button', { name: 'Create text channel' })).toBeInTheDocument()
+  })
+
+  it('hides Create channel actions from a plain member', async () => {
+    await renderRoute(roomPath(pitLane, 'paddock'))
+    const channels = screen.getByRole('navigation', { name: 'Channels' })
+
+    expect(within(channels).queryByRole('button', { name: /^Create .* channel$/ })).not.toBeInTheDocument()
   })
 
   it('marks only the open channel with aria-current', async () => {
@@ -54,23 +70,13 @@ describe('ChannelPanel', () => {
     expect(current).toHaveLength(1)
   })
 
-  it('announces the unread channel as unread', async () => {
-    const { channels } = await renderGeneral()
-
-    expect(within(channels).getByRole('link', { name: 'clips (unread)' })).toHaveAttribute(
-      'href',
-      '/rooms/night-owls/clips',
-    )
-    expect(within(channels).queryByRole('link', { name: 'planning (unread)' })).not.toBeInTheDocument()
-  })
-
-  it('moves aria-current when another channel is opened, and drops its unread label', async () => {
+  it('moves aria-current when another channel is opened', async () => {
     const { user, channels, router } = await renderGeneral()
 
-    await user.click(within(channels).getByRole('link', { name: 'clips (unread)' }))
+    await user.click(within(channels).getByRole('link', { name: 'clips' }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'clips' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/rooms/night-owls/clips')
+    expect(router.state.location.pathname).toBe(roomPath(nightOwls, 'clips'))
     expect(within(channels).getByRole('link', { name: 'clips' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -78,33 +84,6 @@ describe('ChannelPanel', () => {
     expect(within(channels).getByRole('link', { name: 'general' })).not.toHaveAttribute(
       'aria-current',
     )
-  })
-
-  it('lists voice participants with muted, deafened and speaking labels', async () => {
-    const { channels } = await renderGeneral()
-
-    const inVoice = within(channels).getByRole('list', { name: 'In voice' })
-    expect(within(inVoice).getAllByRole('listitem')).toHaveLength(5)
-    expect(participantRow(inVoice, 'Maya')).toHaveTextContent(/Maya, speaking/)
-    expect(participantRow(inVoice, 'Jun')).toHaveTextContent(/Jun\s*muted/)
-    // Deafened takes precedence over muted.
-    expect(participantRow(inVoice, 'Priya')).toHaveTextContent(/Priya\s*deafened/)
-    expect(participantRow(inVoice, 'Priya')).not.toHaveTextContent(/muted/)
-    expect(participantRow(inVoice, 'Alex')).not.toHaveTextContent(/muted|deafened|speaking/)
-    // The empty voice channel lists nobody.
-    expect(within(channels).queryByRole('list', { name: 'In late night' })).not.toBeInTheDocument()
-  })
-
-  it("reflects the viewer's own mute and deafen from the voice controls", async () => {
-    const { user, channels } = await renderGeneral()
-    const inVoice = within(channels).getByRole('list', { name: 'In voice' })
-    expect(participantRow(inVoice, 'Arzl')).not.toHaveTextContent(/muted|deafened/)
-
-    await user.click(screen.getByRole('button', { name: 'Mute' }))
-    expect(participantRow(inVoice, 'Arzl')).toHaveTextContent(/muted/)
-
-    await user.click(screen.getByRole('button', { name: 'Deafen' }))
-    expect(participantRow(inVoice, 'Arzl')).toHaveTextContent(/deafened/)
   })
 
   it('opens room actions from the room menu', async () => {
@@ -159,7 +138,7 @@ describe('ChannelPanel on mobile', () => {
 
   it('opens Invite people from the room menu inside the navigation sheet and returns focus there', async () => {
     const user = userEvent.setup()
-    await renderRoute('/rooms/night-owls/general')
+    await renderRoute(roomPath(nightOwls, 'general'))
 
     await user.click(screen.getByRole('button', { name: 'Open navigation' }))
     const nav = await screen.findByRole('dialog', { name: 'Navigation' })
@@ -178,7 +157,7 @@ describe('ChannelPanel on mobile', () => {
   // Following a link inside the mobile sheet must not leave the overlay covering the new page.
   it('closes the navigation sheet after you pick a channel', async () => {
     const user = userEvent.setup()
-    await renderRoute('/rooms/night-owls/general')
+    await renderRoute(roomPath(nightOwls, 'general'))
 
     await user.click(screen.getByRole('button', { name: 'Open navigation' }))
     const nav = await screen.findByRole('dialog', { name: 'Navigation' })

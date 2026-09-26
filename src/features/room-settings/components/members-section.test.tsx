@@ -1,17 +1,21 @@
 import { screen, within } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
-import type { Room } from '@/features/rooms'
-import { getSampleRoom } from '@/features/rooms'
+import { meQueryOptions } from '@/features/auth'
+import type { RoomDetail } from '@/features/rooms'
 import { failOnConsoleError } from '@/test/console-guard'
-import { renderRoute, renderWithProviders } from '@/test/render'
+import { meFixture } from '@/test/fixtures/me'
+import { nightOwls, raidNight, roomPath } from '@/test/fixtures/rooms'
+import { createTestQueryClient, renderRoute, renderWithProviders } from '@/test/render'
 import { MembersSection } from './members-section'
 
 failOnConsoleError()
 
-async function renderMembers(roomId = 'night-owls') {
+async function renderMembers(room: RoomDetail = nightOwls) {
   const user = userEvent.setup()
-  await renderRoute(`/rooms/${roomId}/settings?section=members`)
-  return { user, list: screen.getByRole('list', { name: 'Members' }) }
+  await renderRoute(`${roomPath(room)}/settings?section=members`)
+  // Every role group's list lives in <main>.
+  return { user, list: screen.getByRole('main') }
 }
 
 function row(list: HTMLElement, name: string) {
@@ -30,6 +34,16 @@ describe('Members section (owner)', () => {
     expect(screen.getByText('7 members')).toBeInTheDocument()
   })
 
+  it('groups members into Owner, Admins and Members lists', async () => {
+    await renderMembers()
+
+    expect(within(screen.getByRole('list', { name: 'Owner — 1' })).getByText('Arzl')).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Admins — 1' })).getByText('Maya')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('list', { name: 'Members — 5' })).getAllByRole('listitem'),
+    ).toHaveLength(5)
+  })
+
   it('shows role badges, marks you, and says when each member joined', async () => {
     const { list } = await renderMembers()
 
@@ -39,7 +53,7 @@ describe('Members section (owner)', () => {
     expect(row(list, 'Jun')).not.toHaveTextContent(/Owner|Admin/)
     for (const item of within(list).getAllByRole('listitem')) {
       expect(item).toHaveTextContent(/Joined \S+/)
-      expect(item.querySelector('time')?.getAttribute('dateTime')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(item.querySelector('time')?.getAttribute('dateTime')).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     }
   })
 
@@ -124,8 +138,8 @@ describe('Members section (owner)', () => {
     expect(screen.getByRole('status')).toBe(status)
     expect(status).toHaveTextContent('1 of 7 members')
 
-    const list = screen.getByRole('list', { name: 'Members' })
-    expect(within(list).getAllByRole('listitem')).toHaveLength(1)
+    const list = screen.getByRole('list', { name: 'Members — 1' })
+    expect(within(screen.getByRole('main')).getAllByRole('listitem')).toHaveLength(1)
     expect(within(list).getByText('Priya')).toBeInTheDocument()
     // The total in the header doesn't change while filtering.
     expect(screen.getByText('7 members')).toBeInTheDocument()
@@ -137,19 +151,19 @@ describe('Members section (owner)', () => {
 
     await user.type(search, 'zz')
 
-    expect(screen.queryByRole('list', { name: 'Members' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryByRole('list')).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('No members match “zz”')
 
     await user.clear(search)
 
-    expect(within(screen.getByRole('list', { name: 'Members' })).getAllByRole('listitem')).toHaveLength(7)
+    expect(within(screen.getByRole('main')).getAllByRole('listitem')).toHaveLength(7)
     expect(screen.getByRole('status')).toHaveTextContent('')
   })
 })
 
 describe('Members section (admin)', () => {
-  it('in raid-night, shows no actions: the owner and yourself are off limits', async () => {
-    const { list } = await renderMembers('raid-night')
+  it('in Raid Night, shows no actions: the owner and yourself are off limits', async () => {
+    const { list } = await renderMembers(raidNight)
 
     expect(within(list).getAllByRole('listitem')).toHaveLength(2)
     expect(row(list, 'Theo')).toHaveTextContent('Owner')
@@ -160,28 +174,32 @@ describe('Members section (admin)', () => {
   })
 
   it('can only remove plain members and never change roles', async () => {
-    // raid-night has no plain members, so use Night Owls' members with an admin viewer.
-    const nightOwls = getSampleRoom('night-owls')
-    if (!nightOwls) throw new Error('sample room missing')
-    // The viewer's role comes from their own member entry (Arzl: admin).
-    const asAdmin: Room = {
+    // Raid Night has no plain members, so use Night Owls' members with you as an admin.
+    const [arzl, maya, ...rest] = nightOwls.members
+    if (!arzl || !maya) throw new Error('fixture members missing')
+    const asAdmin: RoomDetail = {
       ...nightOwls,
-      members: [
-        { id: 'theo', name: 'Theo', presence: 'online', role: 'owner', joinedAt: '2026-04-09' },
-        { id: 'arzl', name: 'Arzl', presence: 'online', role: 'admin', isViewer: true, joinedAt: '2026-07-11' },
-        { id: 'maya', name: 'Maya', presence: 'online', role: 'admin', joinedAt: '2026-03-02' },
-        { id: 'jun', name: 'Jun', presence: 'online', joinedAt: '2026-05-14' },
-      ],
+      myRole: 'admin',
+      members: [{ ...maya, role: 'owner' }, { ...arzl, role: 'admin' }, ...rest.slice(0, 1)],
     }
     const user = userEvent.setup()
-    renderWithProviders(<MembersSection room={asAdmin} />)
+    // MembersSection finds you through the session query.
+    const queryClient = createTestQueryClient()
+    queryClient.setQueryData(meQueryOptions.queryKey, meFixture)
+    renderWithProviders(
+      <QueryClientProvider client={queryClient}>
+        <MembersSection room={asAdmin} />
+      </QueryClientProvider>,
+    )
 
-    const list = screen.getByRole('list', { name: 'Members' })
-    expect(within(list).getAllByRole('button', { name: /^Actions for / }).map((b) => b.getAttribute('aria-label'))).toEqual([
-      'Actions for Jun',
-    ])
+    const page = document.body
+    expect(
+      within(page)
+        .getAllByRole('button', { name: /^Actions for / })
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Actions for Alex'])
 
-    await user.click(within(list).getByRole('button', { name: 'Actions for Jun' }))
+    await user.click(within(page).getByRole('button', { name: 'Actions for Alex' }))
     const menu = await screen.findByRole('menu')
     expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Remove from room',

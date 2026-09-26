@@ -15,7 +15,7 @@ interface RoomEmojiPickerProps {
 export function RoomEmojiPicker({ value, onValueChange, className }: RoomEmojiPickerProps) {
   return (
     <div className={cn('flex items-start gap-4', className)}>
-      <RoomIcon emoji={value} />
+      <RoomIcon icon={{ kind: 'emoji', emoji: value }} />
 
       <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
         <RoomEmojiGrid value={value} onValueChange={onValueChange} />

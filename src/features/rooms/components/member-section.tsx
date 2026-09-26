@@ -1,16 +1,18 @@
 import { useId } from 'react'
 import { cn } from '@/lib/utils'
-import type { RoomMember } from '../sample-room'
+import type { Member } from '../types'
 import { MemberRow } from './member-row'
 
 interface MemberSectionProps {
   title: string
-  members: RoomMember[]
+  members: Member[]
+  /** The signed-in user's profile id, to mark their row "(you)". */
+  viewerId: string | undefined
   className?: string
 }
 
-/** A titled group of members ("Online — 5"). Renders nothing when empty. */
-export function MemberSection({ title, members, className }: MemberSectionProps) {
+/** A titled group of members ("Admins — 2"). Renders nothing when empty. */
+export function MemberSection({ title, members, viewerId, className }: MemberSectionProps) {
   const headingId = useId()
   if (members.length === 0) return null
 
@@ -24,7 +26,7 @@ export function MemberSection({ title, members, className }: MemberSectionProps)
       </h2>
       <ul role="list" className="flex flex-col gap-0.5">
         {members.map((member) => (
-          <MemberRow key={member.id} member={member} />
+          <MemberRow key={member.user.id} member={member} isViewer={member.user.id === viewerId} />
         ))}
       </ul>
     </section>

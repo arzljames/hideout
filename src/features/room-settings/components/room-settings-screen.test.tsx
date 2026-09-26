@@ -1,12 +1,13 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
+import { missingRoomId, nightOwls, pitLane, raidNight, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute } from '@/test/render'
 import { withViewportWidth } from '@/test/viewport'
 
 failOnConsoleError()
 
-const SETTINGS = '/rooms/night-owls/settings'
+const SETTINGS = `${roomPath(nightOwls)}/settings`
 
 function sectionNav() {
   return screen.getByRole('navigation', { name: 'Room settings sections' })
@@ -93,26 +94,29 @@ describe('Room settings routes', () => {
     expect(screen.queryByText("This channel doesn't exist")).not.toBeInTheDocument()
   })
 
-  it('shows the room-not-available screen for an unknown room', async () => {
-    await renderRoute('/rooms/nope/settings')
+  it.each([
+    ['a malformed room id', '/rooms/nope/settings'],
+    ['a room the API 404s', `/rooms/${missingRoomId}/settings`],
+  ])('shows the room-not-available screen for %s', async (_label, path) => {
+    await renderRoute(path)
 
     expectOneMainAndH1("This room isn't available")
     expect(screen.getByRole('link', { name: 'Go to Home' })).toHaveAttribute('href', '/')
   })
 
   it('tells a plain member that only the owner and admins can change settings', async () => {
-    await renderRoute('/rooms/pit-lane/settings')
+    await renderRoute(`${roomPath(pitLane)}/settings`)
 
     expectOneMainAndH1('Only the owner and admins can change room settings')
     expect(screen.getByRole('link', { name: 'Back to Pit Lane' })).toHaveAttribute(
       'href',
-      '/rooms/pit-lane/paddock',
+      roomPath(pitLane, 'paddock'),
     )
     expect(screen.queryByRole('navigation', { name: 'Room settings sections' })).not.toBeInTheDocument()
   })
 
   it('gives an admin Overview without the owner-only Delete room zone', async () => {
-    await renderRoute('/rooms/raid-night/settings')
+    await renderRoute(`${roomPath(raidNight)}/settings`)
 
     expectOneMainAndH1('Overview')
     expect(screen.getByRole('textbox', { name: 'Room name' })).toHaveValue('Raid Night')
@@ -131,7 +135,7 @@ describe('Room settings routes', () => {
 describe('Room menu → Room settings', () => {
   it('is a link to settings for the owner', async () => {
     const user = userEvent.setup()
-    const { router } = await renderRoute('/rooms/night-owls/general')
+    const { router } = await renderRoute(roomPath(nightOwls, 'general'))
 
     await user.click(screen.getByRole('button', { name: 'Night Owls' }))
     const item = await screen.findByRole('menuitem', { name: 'Room settings' })
@@ -145,19 +149,19 @@ describe('Room menu → Room settings', () => {
 
   it('is offered to an admin', async () => {
     const user = userEvent.setup()
-    await renderRoute('/rooms/raid-night/lobby')
+    await renderRoute(roomPath(raidNight, 'lobby'))
 
     await user.click(screen.getByRole('button', { name: 'Raid Night' }))
 
     expect(await screen.findByRole('menuitem', { name: 'Room settings' })).toHaveAttribute(
       'href',
-      '/rooms/raid-night/settings',
+      `${roomPath(raidNight)}/settings`,
     )
   })
 
   it('is absent for a plain member', async () => {
     const user = userEvent.setup()
-    await renderRoute('/rooms/pit-lane/paddock')
+    await renderRoute(roomPath(pitLane, 'paddock'))
 
     await user.click(screen.getByRole('button', { name: 'Pit Lane' }))
     const menu = await screen.findByRole('menu')
@@ -172,7 +176,7 @@ describe('Closing Room settings', () => {
     await renderRoute(SETTINGS)
 
     const close = screen.getByRole('link', { name: 'Close settings' })
-    expect(close).toHaveAttribute('href', '/rooms/night-owls/general')
+    expect(close).toHaveAttribute('href', roomPath(nightOwls, 'general'))
     expect(close).toHaveAttribute('aria-keyshortcuts', 'Escape')
   })
 
@@ -183,7 +187,7 @@ describe('Closing Room settings', () => {
     await user.click(screen.getByRole('link', { name: 'Close settings' }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'general' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/rooms/night-owls/general')
+    expect(router.state.location.pathname).toBe(roomPath(nightOwls, 'general'))
   })
 
   it('tabs through the section nav, then Close, then the Overview fields', async () => {
@@ -213,8 +217,8 @@ describe('Closing Room settings', () => {
 
     await user.keyboard('{Escape}')
 
-    expect(await screen.findByRole('log', { name: 'Messages in #general' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/rooms/night-owls/general')
+    expect(await screen.findByRole('heading', { level: 1, name: 'general' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(roomPath(nightOwls, 'general'))
   })
 
   it('stays on the page when Escape comes from a member search box with text', async () => {
@@ -236,8 +240,8 @@ describe('Closing Room settings', () => {
     await user.click(screen.getByRole('searchbox', { name: 'Search members' }))
     await user.keyboard('{Escape}')
 
-    expect(await screen.findByRole('log', { name: 'Messages in #general' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/rooms/night-owls/general')
+    expect(await screen.findByRole('heading', { level: 1, name: 'general' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(roomPath(nightOwls, 'general'))
   })
 
   it('stays on the page when Escape comes from the Room name field (keeps unsaved edits)', async () => {
@@ -268,7 +272,7 @@ describe('Closing Room settings', () => {
     await user.keyboard('{Escape}')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'general' })).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/rooms/night-owls/general')
+    expect(router.state.location.pathname).toBe(roomPath(nightOwls, 'general'))
   })
 
   it('closes only the delete dialog on Escape', async () => {
