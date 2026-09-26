@@ -1,7 +1,8 @@
+import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { SidebarFooter } from '@/components/ui/sidebar'
 import type { Me } from '@/features/auth'
-import { ChannelPanel, getSampleRoom } from '@/features/rooms'
+import { ChannelPanel, isRoomId, roomQueryOptions } from '@/features/rooms'
 import { VoiceConnectionBar } from '@/features/voice'
 import { cn } from '@/lib/utils'
 import { AccountBar } from './account-bar'
@@ -19,8 +20,12 @@ interface NavPanelProps {
  */
 export function NavPanel({ user, className }: NavPanelProps) {
   const { roomId, channelId } = useParams({ strict: false })
-  // TODO(api): roomQueryOptions; a room you can't see falls back to the Home panel.
-  const room = roomId ? getSampleRoom(roomId) : undefined
+  // The room route loads the room; this only reads the cache (enabled: false), so a room you
+  // can't see, or one that failed to load, falls back to the Home panel without refetching.
+  const { data: room } = useQuery({
+    ...roomQueryOptions(isRoomId(roomId) ? roomId : ''),
+    enabled: false,
+  })
 
   return (
     <div className={cn('flex min-w-0 flex-1 flex-col bg-sidebar', className)}>

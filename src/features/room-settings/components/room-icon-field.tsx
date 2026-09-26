@@ -4,12 +4,16 @@ import { RoomIcon } from '@/components/room-icon'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldTitle } from '@/components/ui/field'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { RoomEmojiGrid, type RoomEmoji } from '@/features/rooms'
+import { RoomEmojiGrid, type RoomEmoji, type RoomIcon as RoomIconData } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 
 interface RoomIconFieldProps {
   value: RoomEmoji
   onChange: (value: RoomEmoji) => void
+  /** Shown instead of `value` in the preview, e.g. the room's saved icon until one is picked. */
+  preview?: RoomIconData
+  /** For the preview's first-letter fallback. */
+  roomName?: string
   className?: string
 }
 
@@ -17,7 +21,13 @@ interface RoomIconFieldProps {
  * Room icon: a large preview, "Change emoji" (opens the emoji grid in a Popover; picking one
  * closes it and Radix returns focus to the trigger) and an inert "Upload image".
  */
-export function RoomIconField({ value, onChange, className }: RoomIconFieldProps) {
+export function RoomIconField({
+  value,
+  onChange,
+  preview,
+  roomName,
+  className,
+}: RoomIconFieldProps) {
   const ids = { title: useId(), hint: useId() }
   const [open, setOpen] = useState(false)
 
@@ -25,7 +35,7 @@ export function RoomIconField({ value, onChange, className }: RoomIconFieldProps
     <Field aria-labelledby={ids.title} aria-describedby={ids.hint} className={cn(className)}>
       <FieldTitle id={ids.title}>Room icon</FieldTitle>
       <div className="flex flex-wrap items-center gap-4">
-        <RoomIcon emoji={value} />
+        <RoomIcon icon={preview ?? { kind: 'emoji', emoji: value }} name={roomName} />
         <div className="flex flex-wrap gap-2">
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>

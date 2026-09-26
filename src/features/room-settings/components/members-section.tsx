@@ -1,29 +1,31 @@
+import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
 import { useId, useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { getViewerRole, type Room } from '@/features/rooms'
+import { meQueryOptions } from '@/features/auth'
+import { groupMembersByRole, type RoomDetail } from '@/features/rooms'
 import { cn } from '@/lib/utils'
-import { MemberSettingsRow } from './member-settings-row'
+import { MemberSettingsGroup } from './member-settings-group'
 import { SettingsSectionHeader } from './settings-section-header'
 
 interface MembersSectionProps {
-  room: Room
+  room: RoomDetail
   className?: string
 }
 
 /**
- * Members with local search, roles, and per-member actions.
+ * Members grouped Owner / Admins / Members, with local search and per-member actions.
  * TODO(perf): virtualize the list past ~200 members.
  */
 export function MembersSection({ room, className }: MembersSectionProps) {
   const searchId = useId()
+  const viewerId = useQuery(meQueryOptions).data?.id
   const [query, setQuery] = useState('')
   const trimmed = query.trim().toLowerCase()
   const members = trimmed
-    ? room.members.filter((member) => member.name.toLowerCase().includes(trimmed))
+    ? room.members.filter((member) => member.user.displayName.toLowerCase().includes(trimmed))
     : room.members
   const count = room.members.length
-  const viewerRole = getViewerRole(room)
   // One status region, always mounted, so every change is announced: empty when unfiltered.
   const status = !trimmed
     ? ''
@@ -61,18 +63,16 @@ export function MembersSection({ room, className }: MembersSectionProps) {
         {status}
       </p>
 
-      {members.length > 0 && (
-        <ul role="list" aria-label="Members" className="divide-y divide-border">
-          {members.map((member) => (
-            <MemberSettingsRow
-              key={member.id}
-              member={member}
-              roomName={room.name}
-              viewerRole={viewerRole}
-            />
-          ))}
-        </ul>
-      )}
+      {groupMembersByRole(members).map((group) => (
+        <MemberSettingsGroup
+          key={group.role}
+          title={group.title}
+          members={group.members}
+          viewerId={viewerId}
+          viewerRole={room.myRole}
+          roomName={room.room.name}
+        />
+      ))}
     </div>
   )
 }

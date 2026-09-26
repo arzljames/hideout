@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 interface ChannelNotFoundProps {
   roomId: string
   roomName: string
-  defaultChannelId: string
+  defaultChannelId: string | null
   className?: string
 }
 
@@ -24,9 +24,15 @@ export function ChannelNotFound({ roomId, roomName, defaultChannelId, className 
         description={`It may have been deleted or renamed. Pick another channel in ${roomName}, or go back to the main one.`}
         actions={
           <Button asChild>
-            <Link to="/rooms/$roomId/$channelId" params={{ roomId, channelId: defaultChannelId }}>
-              Go to {roomName}
-            </Link>
+            {defaultChannelId ? (
+              <Link to="/rooms/$roomId/$channelId" params={{ roomId, channelId: defaultChannelId }}>
+                Go to {roomName}
+              </Link>
+            ) : (
+              <Link to="/rooms/$roomId" params={{ roomId }}>
+                Go to {roomName}
+              </Link>
+            )}
           </Button>
         }
       />

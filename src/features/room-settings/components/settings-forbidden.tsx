@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 interface SettingsForbiddenProps {
   roomId: string
   roomName: string
-  defaultChannelId: string
+  defaultChannelId: string | null
   className?: string
 }
 
@@ -28,9 +28,15 @@ export function SettingsForbidden({
         description={`Ask an admin of ${roomName} if something needs changing.`}
         actions={
           <Button asChild>
-            <Link to="/rooms/$roomId/$channelId" params={{ roomId, channelId: defaultChannelId }}>
-              Back to {roomName}
-            </Link>
+            {defaultChannelId ? (
+              <Link to="/rooms/$roomId/$channelId" params={{ roomId, channelId: defaultChannelId }}>
+                Back to {roomName}
+              </Link>
+            ) : (
+              <Link to="/rooms/$roomId" params={{ roomId }}>
+                Back to {roomName}
+              </Link>
+            )}
           </Button>
         }
       />

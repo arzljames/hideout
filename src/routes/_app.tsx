@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { requireViewer, useSessionGuard } from '@/features/auth'
+import { useRealtimeConnection, useUserEvents } from '@/features/realtime'
 import { AppErrorScreen, AppNotFoundScreen, AppShell, AppShellSkeleton } from '@/features/shell'
 
 export const Route = createFileRoute('/_app')({
@@ -12,6 +13,9 @@ export const Route = createFileRoute('/_app')({
 
 function AppLayout() {
   useSessionGuard()
+  const { me } = Route.useRouteContext()
+  useRealtimeConnection(me.id)
+  useUserEvents(me.id)
 
   return (
     <AppShell>

@@ -1,4 +1,5 @@
-import { createFileRoute, notFound } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
 import {
   RoomSettingsScreen,
   SettingsError,
@@ -6,25 +7,28 @@ import {
   SettingsUnavailable,
   settingsSearchSchema,
 } from '@/features/room-settings'
-import { getSampleRoom } from '@/features/rooms'
+import {
+  loadRoom,
+  redirectToLowercaseRoomId,
+  roomQueryOptions,
+  useRoomEvents,
+} from '@/features/rooms'
 
 export const Route = createFileRoute('/_focus/rooms/$roomId/settings')({
   validateSearch: settingsSearchSchema,
-  loader: ({ params }) => {
-    // TODO(api): context.queryClient.ensureQueryData(roomQueryOptions(params.roomId)); map an
-    // API 404 (missing room or not a member) to notFound().
-    const room = getSampleRoom(params.roomId)
-    if (!room) throw notFound()
-    return { room }
-  },
+  beforeLoad: redirectToLowercaseRoomId,
+  // A malformed id or an API 404 (missing room, or not a member) throws notFound().
+  loader: ({ context, params }) => loadRoom(context.queryClient, params.roomId),
   pendingComponent: SettingsSkeleton,
-  errorComponent: () => <SettingsError />,
+  errorComponent: ({ error }) => <SettingsError error={error} />,
   notFoundComponent: () => <SettingsUnavailable />,
   component: RoomSettingsRoute,
 })
 
 function RoomSettingsRoute() {
-  const { room } = Route.useLoaderData()
+  const { roomId } = Route.useParams()
+  const { data: room } = useSuspenseQuery(roomQueryOptions(roomId))
   const { section } = Route.useSearch()
-  return <RoomSettingsScreen room={room} section={section} />
+  const { paused } = useRoomEvents(roomId)
+  return <RoomSettingsScreen room={room} section={section} liveUpdatesPaused={paused} />
 }

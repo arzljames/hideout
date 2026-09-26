@@ -34,7 +34,13 @@ export function AppHeader({ title, icon, description, actions, className }: AppH
         {icon && (
           <span className="flex shrink-0 text-muted-foreground [&_svg]:size-4">{icon}</span>
         )}
-        <h1 className="min-w-0 truncate text-sm font-semibold">{title}</h1>
+        {/* Focusable from script (tabIndex -1), e.g. after opening a newly created room. */}
+        <h1
+          tabIndex={-1}
+          className="min-w-0 truncate rounded-sm text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {title}
+        </h1>
         {description && (
           <>
             <span aria-hidden="true" className="hidden h-4 w-px shrink-0 bg-border sm:block" />

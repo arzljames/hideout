@@ -8,18 +8,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { RoomMember } from '@/features/rooms'
+import type { Role } from '@/features/rooms'
 import { RemoveMemberDialog } from './remove-member-dialog'
 
 interface MemberActionsMenuProps {
-  member: RoomMember
+  memberName: string
+  memberRole: Role
   roomName: string
   /** Only the owner can promote or demote admins. */
   canChangeRole: boolean
 }
 
 /** "Actions for Maya" menu: Make/Remove admin and Remove from room (with confirmation). */
-export function MemberActionsMenu({ member, roomName, canChangeRole }: MemberActionsMenuProps) {
+export function MemberActionsMenu({
+  memberName,
+  memberRole,
+  roomName,
+  canChangeRole,
+}: MemberActionsMenuProps) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [removeOpen, setRemoveOpen] = useState(false)
   // Open the confirmation after the menu has closed, so the focus scopes don't fight.
@@ -34,7 +40,7 @@ export function MemberActionsMenu({ member, roomName, canChangeRole }: MemberAct
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label={`Actions for ${member.name}`}
+            aria-label={`Actions for ${memberName}`}
           >
             <MoreHorizontal aria-hidden="true" />
           </Button>
@@ -53,7 +59,7 @@ export function MemberActionsMenu({ member, roomName, canChangeRole }: MemberAct
           {canChangeRole && (
             <>
               {/* TODO(api): change member role mutation. */}
-              {member.role === 'admin' ? (
+              {memberRole === 'admin' ? (
                 <DropdownMenuItem>
                   <ShieldOff aria-hidden="true" />
                   Remove admin
@@ -80,7 +86,7 @@ export function MemberActionsMenu({ member, roomName, canChangeRole }: MemberAct
       </DropdownMenu>
 
       <RemoveMemberDialog
-        memberName={member.name}
+        memberName={memberName}
         roomName={roomName}
         open={removeOpen}
         onOpenChange={setRemoveOpen}

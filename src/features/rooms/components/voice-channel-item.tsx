@@ -1,15 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { cva } from 'class-variance-authority'
 import { Volume2 } from 'lucide-react'
-import {
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-} from '@/components/ui/sidebar'
+import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { useVoiceStore } from '@/features/voice'
 import { cn } from '@/lib/utils'
-import { useVoiceParticipants } from '../hooks/use-voice-participants'
-import type { Room, VoiceChannel } from '../sample-room'
-import { VoiceParticipantItem } from './voice-participant-item'
+import type { Channel } from '../types'
 
 const voiceChannelIconVariants = cva('', {
   variants: {
@@ -21,24 +16,28 @@ const voiceChannelIconVariants = cva('', {
 })
 
 interface VoiceChannelItemProps {
-  room: Room
-  channel: VoiceChannel
+  roomId: string
+  channel: Channel
   isActive: boolean
   className?: string
 }
 
-/** A voice channel link with its participants listed underneath. */
-export function VoiceChannelItem({ room, channel, isActive, className }: VoiceChannelItemProps) {
-  const { participants, viewerConnected } = useVoiceParticipants(room, channel)
+/**
+ * A voice channel link. TODO(livekit): list who's in the channel underneath
+ * (voice-realtime-engineer).
+ */
+export function VoiceChannelItem({ roomId, channel, isActive, className }: VoiceChannelItemProps) {
+  const connection = useVoiceStore((s) => s.connection)
+  const connected = connection?.roomId === roomId && connection.channelId === channel.id
 
   return (
     <SidebarMenuItem className={cn(className)}>
       <SidebarMenuButton asChild isActive={isActive}>
-        <Link to="/rooms/$roomId/$channelId" params={{ roomId: room.id, channelId: channel.id }}>
-          <Volume2 aria-hidden="true" className={voiceChannelIconVariants({ connected: viewerConnected })} />
+        <Link to="/rooms/$roomId/$channelId" params={{ roomId, channelId: channel.id }}>
+          <Volume2 aria-hidden="true" className={voiceChannelIconVariants({ connected })} />
           <span className="truncate">
             {channel.name}
-            {viewerConnected && (
+            {connected && (
               <>
                 {' '}
                 <span className="sr-only">(connected)</span>
@@ -47,20 +46,6 @@ export function VoiceChannelItem({ room, channel, isActive, className }: VoiceCh
           </span>
         </Link>
       </SidebarMenuButton>
-
-      {participants.length > 0 && (
-        <SidebarMenuSub aria-label={`In ${channel.name}`}>
-          {participants.map(({ member, muted, deafened, speaking }) => (
-            <VoiceParticipantItem
-              key={member.id}
-              member={member}
-              muted={muted}
-              deafened={deafened}
-              speaking={speaking}
-            />
-          ))}
-        </SidebarMenuSub>
-      )}
     </SidebarMenuItem>
   )
 }

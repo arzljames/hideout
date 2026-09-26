@@ -17,7 +17,14 @@ async function joinedTextIn(timeZone: string, joinedAt: string) {
     const { unmount } = render(
       <ul>
         <MemberSettingsRow
-          member={{ id: 'theo', name: 'Theo', presence: 'online', joinedAt }}
+          member={{
+            roomId: 'a0000000-0000-4000-8000-000000000001',
+            user: { id: 'e0000000-0000-4000-8000-000000000005', displayName: 'Theo', avatarUrl: null },
+            role: 'member',
+            joinedAt,
+            currentGame: null,
+          }}
+          isViewer={false}
           roomName="Night Owls"
           viewerRole="member"
         />
@@ -35,11 +42,20 @@ async function joinedTextIn(timeZone: string, joinedAt: string) {
 
 describe('MemberSettingsRow join date', () => {
   it('shows the join month in a timezone east of UTC', async () => {
-    expect(await joinedTextIn('Asia/Manila', '2026-09-01')).toBe('Joined Sep 2026')
+    expect(await joinedTextIn('Asia/Manila', '2026-09-15T12:00:00.000Z')).toBe('Joined Sep 2026')
   })
 
-  // joinedAt is a date-only string; the month must not slip back a day in timezones west of UTC.
   it('shows the join month in a timezone west of UTC', async () => {
-    expect(await joinedTextIn('America/Los_Angeles', '2026-09-01')).toBe('Joined Sep 2026')
+    expect(await joinedTextIn('America/Los_Angeles', '2026-09-15T12:00:00.000Z')).toBe(
+      'Joined Sep 2026',
+    )
+  })
+
+  // joinedAt is a full timestamp, so the month is the one where the viewer lives.
+  it("uses the viewer's local month near a month boundary", async () => {
+    expect(await joinedTextIn('America/Los_Angeles', '2026-09-01T03:00:00.000Z')).toBe(
+      'Joined Aug 2026',
+    )
+    expect(await joinedTextIn('Asia/Manila', '2026-08-31T20:00:00.000Z')).toBe('Joined Sep 2026')
   })
 })

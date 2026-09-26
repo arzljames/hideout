@@ -9,13 +9,13 @@ import {
   SidebarHeader,
   SidebarMenu,
 } from '@/components/ui/sidebar'
-import type { Room, TextChannel, VoiceChannel } from '../sample-room'
+import type { RoomDetail } from '../types'
 import { RoomMenu } from './room-menu'
 import { TextChannelItem } from './text-channel-item'
 import { VoiceChannelItem } from './voice-channel-item'
 
 interface ChannelPanelProps {
-  room: Room
+  room: RoomDetail
   /** The channel in the URL, if any. */
   activeChannelId?: string
 }
@@ -26,8 +26,10 @@ interface ChannelPanelProps {
  */
 export function ChannelPanel({ room, activeChannelId }: ChannelPanelProps) {
   const ids = { text: useId(), voice: useId() }
-  const textChannels = room.channels.filter((c): c is TextChannel => c.kind === 'text')
-  const voiceChannels = room.channels.filter((c): c is VoiceChannel => c.kind === 'voice')
+  const textChannels = room.channels.filter((channel) => channel.type === 'text')
+  const voiceChannels = room.channels.filter((channel) => channel.type === 'voice')
+  // UI-only gate; hideout-api enforces the role on channel writes.
+  const canManageChannels = room.myRole !== 'member'
 
   return (
     <>
@@ -39,16 +41,18 @@ export function ChannelPanel({ room, activeChannelId }: ChannelPanelProps) {
         <nav aria-label="Channels">
           <SidebarGroup>
             <SidebarGroupLabel id={ids.text}>Text channels</SidebarGroupLabel>
-            {/* TODO(channels): open the create-channel Dialog (text). */}
-            <SidebarGroupAction type="button" aria-label="Create text channel">
-              <Plus aria-hidden="true" />
-            </SidebarGroupAction>
+            {canManageChannels && (
+              // TODO(channels): open the create-channel Dialog (text).
+              <SidebarGroupAction type="button" aria-label="Create text channel">
+                <Plus aria-hidden="true" />
+              </SidebarGroupAction>
+            )}
             <SidebarGroupContent>
               <SidebarMenu aria-labelledby={ids.text}>
                 {textChannels.map((channel) => (
                   <TextChannelItem
                     key={channel.id}
-                    roomId={room.id}
+                    roomId={room.room.id}
                     channel={channel}
                     isActive={channel.id === activeChannelId}
                   />
@@ -59,16 +63,18 @@ export function ChannelPanel({ room, activeChannelId }: ChannelPanelProps) {
 
           <SidebarGroup>
             <SidebarGroupLabel id={ids.voice}>Voice channels</SidebarGroupLabel>
-            {/* TODO(channels): open the create-channel Dialog (voice). */}
-            <SidebarGroupAction type="button" aria-label="Create voice channel">
-              <Plus aria-hidden="true" />
-            </SidebarGroupAction>
+            {canManageChannels && (
+              // TODO(channels): open the create-channel Dialog (voice).
+              <SidebarGroupAction type="button" aria-label="Create voice channel">
+                <Plus aria-hidden="true" />
+              </SidebarGroupAction>
+            )}
             <SidebarGroupContent>
               <SidebarMenu aria-labelledby={ids.voice}>
                 {voiceChannels.map((channel) => (
                   <VoiceChannelItem
                     key={channel.id}
-                    room={room}
+                    roomId={room.room.id}
                     channel={channel}
                     isActive={channel.id === activeChannelId}
                   />

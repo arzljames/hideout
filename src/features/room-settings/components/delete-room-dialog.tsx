@@ -1,8 +1,7 @@
-import { Trash2 } from 'lucide-react'
+import { LoaderCircle, Trash2 } from 'lucide-react'
 import { useId, useRef, useState } from 'react'
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -14,24 +13,29 @@ import {
 import { Button } from '@/components/ui/button'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { useDeleteRoom } from '@/features/rooms'
 
 interface DeleteRoomDialogProps {
+  roomId: string
   roomName: string
 }
 
 /**
  * "Delete room" button and its confirmation. The destructive action stays disabled until the
  * room name is typed exactly (Enter in the field confirms only then); the input clears
- * whenever the dialog closes.
+ * whenever the dialog closes. While the delete is in flight the dialog stays open; on success
+ * useDeleteRoom goes Home.
  */
-export function DeleteRoomDialog({ roomName }: DeleteRoomDialogProps) {
+export function DeleteRoomDialog({ roomId, roomName }: DeleteRoomDialogProps) {
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [confirmation, setConfirmation] = useState('')
   const matches = confirmation === roomName
+  const deleteRoom = useDeleteRoom(roomId)
 
   function handleOpenChange(next: boolean) {
+    if (!next && deleteRoom.isPending) return
     setOpen(next)
     if (!next) setConfirmation('')
   }
@@ -65,8 +69,7 @@ export function DeleteRoomDialog({ roomName }: DeleteRoomDialogProps) {
           className="grid gap-4"
           onSubmit={(event) => {
             event.preventDefault()
-            // TODO(api): delete the room, then navigate Home and toast.
-            if (matches) handleOpenChange(false)
+            if (matches && !deleteRoom.isPending) deleteRoom.mutate()
           }}
         >
           <Field>
@@ -81,10 +84,19 @@ export function DeleteRoomDialog({ roomName }: DeleteRoomDialogProps) {
           </Field>
 
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction type="submit" variant="destructive-solid" disabled={!matches}>
+            <AlertDialogCancel disabled={deleteRoom.isPending}>Cancel</AlertDialogCancel>
+            {/* A plain submit button, not AlertDialogAction: the dialog stays open while the
+                delete is in flight, and on failure (toasted) so the user can retry. */}
+            <Button
+              type="submit"
+              variant="destructive-solid"
+              disabled={!matches || deleteRoom.isPending}
+            >
+              {deleteRoom.isPending && (
+                <LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" />
+              )}
               Delete room
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </form>
       </AlertDialogContent>

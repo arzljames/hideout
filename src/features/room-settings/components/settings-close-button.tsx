@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils'
 
 interface SettingsCloseButtonProps {
   roomId: string
-  channelId: string
+  /** The room's default channel; null goes to the room itself. */
+  channelId: string | null
   /** Show the "Esc" caption under the button (desktop). */
   showCaption?: boolean
   className?: string
@@ -21,14 +22,25 @@ export function SettingsCloseButton({
   return (
     <div className={cn('flex flex-col items-center gap-1', className)}>
       <Button asChild variant="outline" size="icon-lg" shape="round">
-        <Link
-          to="/rooms/$roomId/$channelId"
-          params={{ roomId, channelId }}
-          aria-label="Close settings"
-          aria-keyshortcuts="Escape"
-        >
-          <X aria-hidden="true" />
-        </Link>
+        {channelId ? (
+          <Link
+            to="/rooms/$roomId/$channelId"
+            params={{ roomId, channelId }}
+            aria-label="Close settings"
+            aria-keyshortcuts="Escape"
+          >
+            <X aria-hidden="true" />
+          </Link>
+        ) : (
+          <Link
+            to="/rooms/$roomId"
+            params={{ roomId }}
+            aria-label="Close settings"
+            aria-keyshortcuts="Escape"
+          >
+            <X aria-hidden="true" />
+          </Link>
+        )}
       </Button>
       {showCaption && (
         <span aria-hidden="true" className="text-xs text-muted-foreground">

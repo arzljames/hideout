@@ -1,6 +1,7 @@
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
+import { nightOwls, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute } from '@/test/render'
 import { useVoiceStore } from '../voice-store'
 
@@ -8,7 +9,7 @@ failOnConsoleError()
 
 async function renderBar() {
   const user = userEvent.setup()
-  await renderRoute('/rooms/night-owls/general')
+  await renderRoute(roomPath(nightOwls, 'general'))
   const bar = screen.getByRole('region', { name: 'Voice connection' })
   return {
     user,
@@ -42,7 +43,7 @@ describe('VoiceConnectionBar', () => {
 
   it('renders nothing when not connected', async () => {
     useVoiceStore.setState({ connection: null })
-    await renderRoute('/rooms/night-owls/general')
+    await renderRoute(roomPath(nightOwls, 'general'))
 
     expect(screen.queryByRole('region', { name: 'Voice connection' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Mute' })).not.toBeInTheDocument()

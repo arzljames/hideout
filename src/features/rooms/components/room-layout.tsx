@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { ConnectionBanner } from '@/components/connection-banner'
 import {
   Sheet,
   SheetContent,
@@ -9,13 +10,15 @@ import {
 import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { useMemberPanelStore } from '../member-panel-store'
-import type { Room } from '../sample-room'
+import type { RoomDetail } from '../types'
 import { MemberList } from './member-list'
 
 interface RoomLayoutProps {
-  room: Room
+  room: RoomDetail
   /** The channel column (header, content, composer). */
   children: ReactNode
+  /** Live updates for the room are down (see useRoomEvents): show a banner over the channel. */
+  liveUpdatesPaused?: boolean
   className?: string
 }
 
@@ -24,7 +27,7 @@ interface RoomLayoutProps {
  * right-hand Sheet below. The Sheet root wraps the whole room so MemberPanelToggle (in the
  * channel header) can be its real trigger.
  */
-export function RoomLayout({ room, children, className }: RoomLayoutProps) {
+export function RoomLayout({ room, children, liveUpdatesPaused, className }: RoomLayoutProps) {
   const { isMobile } = useSidebar()
   const panelOpen = useMemberPanelStore((s) => s.open)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -38,9 +41,21 @@ export function RoomLayout({ room, children, className }: RoomLayoutProps) {
   return (
     <Sheet open={isMobile && sheetOpen} onOpenChange={setSheetOpen}>
       <div className={cn('flex h-svh min-h-0', className)}>
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {liveUpdatesPaused && (
+            <ConnectionBanner
+              title="Live updates paused, retrying…"
+              description="Changes to this room may not show until the connection is back."
+              className="m-2 w-auto shrink-0"
+            />
+          )}
+          {children}
+        </div>
         {!isMobile && panelOpen && (
-          <MemberList room={room} className="w-60 shrink-0 border-l border-sidebar-border" />
+          <MemberList
+            members={room.members}
+            className="w-60 shrink-0 border-l border-sidebar-border"
+          />
         )}
       </div>
 
@@ -48,9 +63,9 @@ export function RoomLayout({ room, children, className }: RoomLayoutProps) {
         <SheetContent side="right" className="w-72 gap-0 bg-sidebar p-0">
           <SheetHeader className="border-b border-sidebar-border">
             <SheetTitle>Members</SheetTitle>
-            <SheetDescription className="sr-only">People in {room.name}</SheetDescription>
+            <SheetDescription className="sr-only">People in {room.room.name}</SheetDescription>
           </SheetHeader>
-          <MemberList room={room} className="flex-1" />
+          <MemberList members={room.members} className="flex-1" />
         </SheetContent>
       )}
     </Sheet>

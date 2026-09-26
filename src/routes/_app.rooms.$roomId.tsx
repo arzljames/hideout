@@ -1,32 +1,33 @@
-import { createFileRoute, notFound, Outlet } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import {
-  getSampleRoom,
+  loadRoom,
+  redirectToLowercaseRoomId,
   RoomError,
   RoomLayout,
   RoomNotFound,
+  roomQueryOptions,
   RoomSkeleton,
+  useRoomEvents,
 } from '@/features/rooms'
 
 export const Route = createFileRoute('/_app/rooms/$roomId')({
-  loader: ({ params }) => {
-    // TODO(api): context.queryClient.ensureQueryData(roomQueryOptions(params.roomId)); map an
-    // API 404 (missing room or not a member) to notFound().
-    const room = getSampleRoom(params.roomId)
-    if (!room) throw notFound()
-    return { room }
-  },
+  beforeLoad: redirectToLowercaseRoomId,
+  // A malformed id or an API 404 (missing room, or not a member) throws notFound().
+  loader: ({ context, params }) => loadRoom(context.queryClient, params.roomId),
   pendingComponent: RoomSkeleton,
-  errorComponent: () => <RoomError />,
+  errorComponent: ({ error }) => <RoomError error={error} />,
   notFoundComponent: () => <RoomNotFound />,
   component: RoomRoute,
 })
 
 function RoomRoute() {
-  // TODO(api): read with useSuspenseQuery(roomQueryOptions(roomId)) instead of loader data.
-  const { room } = Route.useLoaderData()
+  const { roomId } = Route.useParams()
+  const { data: room } = useSuspenseQuery(roomQueryOptions(roomId))
+  const { paused } = useRoomEvents(roomId)
 
   return (
-    <RoomLayout room={room}>
+    <RoomLayout room={room} liveUpdatesPaused={paused}>
       <Outlet />
     </RoomLayout>
   )

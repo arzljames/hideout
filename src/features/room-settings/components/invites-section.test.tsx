@@ -1,21 +1,26 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
-import { getSampleRoom } from '@/features/rooms'
+import { nightOwls, raidNight, roomPath } from '@/test/fixtures/rooms'
 import { renderRoute, renderWithProviders } from '@/test/render'
+import { getSampleInviteLinks } from '../sample-invite-links'
 import { InvitesSection } from './invites-section'
 
 failOnConsoleError()
 
-function nightOwls() {
-  const room = getSampleRoom('night-owls')
-  if (!room) throw new Error('sample room missing')
-  return room
+// Invite links aren't wired to the API yet: rooms from the API show the empty state, and the
+// list is tested with the design sample links rendered directly.
+function renderSampleInvites(sampleRoomId = 'night-owls') {
+  const user = userEvent.setup()
+  renderWithProviders(
+    <InvitesSection roomName="Night Owls" inviteLinks={getSampleInviteLinks(sampleRoomId)} />,
+  )
+  return { user }
 }
 
-async function renderInvites(roomId = 'night-owls') {
+async function renderInvites() {
   const user = userEvent.setup()
-  await renderRoute(`/rooms/${roomId}/settings?section=invites`)
+  await renderRoute(`${roomPath(nightOwls)}/settings?section=invites`)
   return { user }
 }
 
@@ -29,18 +34,17 @@ function linkRow(code: string) {
 }
 
 describe('Invites section', () => {
-  it('lists active links with code, creator, uses and expiry', async () => {
-    await renderInvites()
+  it('lists active links with code, creator, uses and expiry', () => {
+    renderSampleInvites()
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Invites' })).toBeInTheDocument()
     const list = screen.getByRole('list', { name: 'Active invite links' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(2)
     expect(linkRow('7Hq2xK')).toHaveTextContent('Created by Maya · 3 / 10 uses · Expires in 5 hours')
     expect(linkRow('p4LmZw')).toHaveTextContent('Created by Arzl · 12 uses · Never expires')
   })
 
-  it("shows an admin room's links (raid-night)", async () => {
-    await renderInvites('raid-night')
+  it("shows another room's links", () => {
+    renderSampleInvites('raid-night')
 
     expect(linkRow('R41dNt')).toHaveTextContent('Created by Theo · 1 / 5 uses · Expires in 1 day')
   })
@@ -48,7 +52,7 @@ describe('Invites section', () => {
   it('uses the singular for one use on an unlimited link', () => {
     renderWithProviders(
       <InvitesSection
-        room={nightOwls()}
+        roomName="Night Owls"
         inviteLinks={[{ code: 'One111', createdBy: 'Jun', uses: 1, maxUses: null, expiresIn: null }]}
       />,
     )
@@ -57,7 +61,7 @@ describe('Invites section', () => {
   })
 
   it('confirms Revoke and returns focus to it on Cancel', async () => {
-    const { user } = await renderInvites()
+    const { user } = renderSampleInvites()
     const revoke = within(linkRow('7Hq2xK')).getByRole('button', { name: 'Revoke invite 7Hq2xK' })
 
     await user.click(revoke)
@@ -71,8 +75,8 @@ describe('Invites section', () => {
     expect(revoke).toHaveFocus()
   })
 
-  it('returns focus to Revoke on Escape, without leaving settings', async () => {
-    const { user } = await renderInvites()
+  it('returns focus to Revoke on Escape', async () => {
+    const { user } = renderSampleInvites()
     const revoke = screen.getByRole('button', { name: 'Revoke invite p4LmZw' })
 
     await user.click(revoke)
@@ -81,7 +85,6 @@ describe('Invites section', () => {
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
     expect(revoke).toHaveFocus()
-    expect(screen.getByRole('heading', { level: 1, name: 'Invites' })).toBeInTheDocument()
   })
 
   it('opens the Invite dialog from Create invite link and returns focus on close', async () => {
@@ -96,10 +99,11 @@ describe('Invites section', () => {
     expect(create).toHaveFocus()
   })
 
-  it('shows an empty state for a room with no active links', () => {
-    // Every sample room you can open settings for has links, so render the section directly.
-    renderWithProviders(<InvitesSection room={nightOwls()} inviteLinks={[]} />)
+  it('shows an empty state for a room with no active links', async () => {
+    // Invite links aren't loaded from the API yet, so every real room shows the empty state.
+    await renderInvites()
 
+    expect(screen.getByRole('heading', { level: 1, name: 'Invites' })).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Active invite links' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'No active invite links' })).toBeInTheDocument()
     expect(screen.getByText('Create one to let your squad in.')).toBeInTheDocument()
@@ -107,6 +111,6 @@ describe('Invites section', () => {
   })
 
   it('keeps invite codes out of the room data (they are credentials)', () => {
-    expect(JSON.stringify(nightOwls())).not.toContain('7Hq2xK')
+    expect(JSON.stringify([nightOwls, raidNight])).not.toContain('7Hq2xK')
   })
 })

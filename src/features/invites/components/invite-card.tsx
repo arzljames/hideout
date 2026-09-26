@@ -17,7 +17,7 @@ export function InviteCard({ invite, className }: InviteCardProps) {
   return (
     <Card className={cn('[--card-spacing:--spacing(8)]', className)}>
       <CardContent className="flex flex-col items-center text-center">
-        <RoomIcon emoji={room.emoji} />
+        <RoomIcon icon={{ kind: 'emoji', emoji: room.emoji }} name={room.name} />
 
         <p className="mt-5 flex items-center gap-1.5 text-sm text-muted-foreground">
           <UserAvatar name={inviter.name} tone={inviter.tone} size="sm" />

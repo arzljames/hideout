@@ -1,21 +1,14 @@
 import { queryOptions, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { api, ApiError, toApiError, withNetworkErrors } from '@/lib/api/client'
+import { api, toApiError, withNetworkErrors } from '@/lib/api/client'
+import { retryTransient } from '@/lib/api/retry'
 import type { components } from '@/lib/api/schema.gen'
+import { stopRealtime } from '@/lib/realtime/connection'
 import { resetVoiceStore } from '@/features/voice'
 import { useVoiceSession } from '@/stores/voice-session'
 
 export type Me = components['schemas']['Me']
-
-/** Retry once for server errors and unreachable API; never for 4xx (they won't change). */
-function retryTransient(failureCount: number, error: unknown): boolean {
-  return (
-    failureCount < 1 &&
-    error instanceof ApiError &&
-    (error.code === 'NETWORK' || error.status >= 500)
-  )
-}
 
 /** The signed-in user, or `null` when signed out (401). Other failures throw an ApiError. */
 export const meQueryOptions = queryOptions({
@@ -36,7 +29,7 @@ let ending: Promise<void> | null = null
 
 /**
  * The single session teardown, for sign-out and for an expired session:
- * 1. cancel in-flight queries and drop voice state,
+ * 1. cancel in-flight queries, stop Realtime (channels, socket, token refresh), drop voice state,
  * 2. mark the user signed out (so /sign-in's guard doesn't bounce back to Home),
  * 3. navigate to /sign-in, which unmounts every `_app` observer,
  * 4. only then clear the remaining cached data, so nothing mounted refetches (and 401s) first.
@@ -48,6 +41,7 @@ export function endSession(
 ): Promise<void> {
   ending ??= (async () => {
     try {
+      stopRealtime()
       await queryClient.cancelQueries()
       resetVoiceStore()
       useVoiceSession.getState().leave()

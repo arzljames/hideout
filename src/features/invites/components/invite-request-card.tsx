@@ -31,7 +31,7 @@ export function InviteRequestCard({
       <Card>
         <CardContent className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <RoomIcon emoji={room.emoji} size="md" />
+            <RoomIcon icon={{ kind: 'emoji', emoji: room.emoji }} name={room.name} size="md" />
             <div className="min-w-0">
               <h2 id={nameId} className="truncate text-sm font-semibold">
                 {room.name}

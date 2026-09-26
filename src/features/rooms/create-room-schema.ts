@@ -1,10 +1,13 @@
 import { z } from 'zod'
 import { DEFAULT_ROOM_EMOJI, ROOM_EMOJIS } from './room-emojis'
 
-export const ROOM_NAME_MAX_LENGTH = 40
+/** RoomName in the hideout-api contract: 1–48 UTF-16 code units after trimming. */
+export const ROOM_NAME_MAX_LENGTH = 48
 
-// TODO(api): align limits with the create-room request in the hideout-api contract.
-/** Room name rules, shared by Create room and Room settings. */
+/**
+ * Room name rules, shared by Create room and Room settings. The API also rejects invisible
+ * and control characters; its 422 message is shown on the field when that happens.
+ */
 export const roomNameSchema = z
   .string()
   .trim()

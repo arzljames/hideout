@@ -19,13 +19,13 @@ describe('createRoomSchema', () => {
     expect(nameIssues('   ')).toEqual(['Give your room a name'])
   })
 
-  it('accepts a name of exactly 40 characters', () => {
-    expect(ROOM_NAME_MAX_LENGTH).toBe(40)
-    expect(nameIssues('a'.repeat(40))).toEqual([])
+  it('accepts a name of exactly 48 characters (the RoomName limit)', () => {
+    expect(ROOM_NAME_MAX_LENGTH).toBe(48)
+    expect(nameIssues('a'.repeat(48))).toEqual([])
   })
 
-  it('rejects names longer than 40 characters', () => {
-    expect(nameIssues('a'.repeat(41))).toEqual(['At most 40 characters'])
+  it('rejects names longer than 48 characters', () => {
+    expect(nameIssues('a'.repeat(49))).toEqual(['At most 48 characters'])
   })
 
   it('trims surrounding whitespace from the name', () => {

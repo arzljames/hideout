@@ -1,6 +1,7 @@
+import { ConnectionBanner } from '@/components/connection-banner'
 import { RoomIcon } from '@/components/room-icon'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { getViewerRole, type Room } from '@/features/rooms'
+import type { RoomDetail } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 import { useEscapeToClose } from '../hooks/use-escape-to-close'
 import { getSampleInviteLinks } from '../sample-invite-links'
@@ -14,8 +15,10 @@ import { SettingsForbidden } from './settings-forbidden'
 import { SettingsNav } from './settings-nav'
 
 interface RoomSettingsScreenProps {
-  room: Room
+  room: RoomDetail
   section: SettingsSection
+  /** Realtime for this room is down for a while: show a non-blocking banner. */
+  liveUpdatesPaused?: boolean
   className?: string
 }
 
@@ -24,16 +27,22 @@ interface RoomSettingsScreenProps {
  * below `md`), and the section in <main>. Esc or the round X goes back to the room.
  * Tab order: section nav → close → section content.
  */
-export function RoomSettingsScreen({ room, section, className }: RoomSettingsScreenProps) {
+export function RoomSettingsScreen({
+  room,
+  section,
+  liveUpdatesPaused,
+  className,
+}: RoomSettingsScreenProps) {
   const isMobile = useIsMobile()
-  useEscapeToClose(room.id, room.defaultChannelId)
+  const { id: roomId, name: roomName, icon } = room.room
+  useEscapeToClose(roomId, room.defaultChannelId)
 
-  // UI-only gate; hideout-api must enforce the role on every settings mutation (expect 403 handling when wired).
-  if (getViewerRole(room) === 'member') {
+  // UI-only gate; hideout-api enforces the role on every settings mutation (403 is handled).
+  if (room.myRole === 'member') {
     return (
       <SettingsForbidden
-        roomId={room.id}
-        roomName={room.name}
+        roomId={roomId}
+        roomName={roomName}
         defaultChannelId={room.defaultChannelId}
       />
     )
@@ -41,9 +50,9 @@ export function RoomSettingsScreen({ room, section, className }: RoomSettingsScr
 
   const roomHeading = (
     <div className="flex min-w-0 items-center gap-2.5">
-      <RoomIcon emoji={room.emoji} size="sm" />
+      <RoomIcon icon={icon} name={roomName} size="sm" />
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold">{room.name}</p>
+        <p className="truncate text-sm font-semibold">{roomName}</p>
         <p className="text-xs text-muted-foreground">Room settings</p>
       </div>
     </div>
@@ -51,7 +60,7 @@ export function RoomSettingsScreen({ room, section, className }: RoomSettingsScr
 
   const close = (
     <SettingsCloseButton
-      roomId={room.id}
+      roomId={roomId}
       channelId={room.defaultChannelId}
       showCaption={!isMobile}
     />
@@ -65,15 +74,15 @@ export function RoomSettingsScreen({ room, section, className }: RoomSettingsScr
             {roomHeading}
             {close}
           </div>
-          <SettingsNav roomId={room.id} section={section} orientation="horizontal" />
+          <SettingsNav roomId={roomId} section={section} orientation="horizontal" />
         </header>
       ) : (
         <aside
-          aria-label={`${room.name} settings`}
+          aria-label={`${roomName} settings`}
           className="flex w-64 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar p-4"
         >
           {roomHeading}
-          <SettingsNav roomId={room.id} section={section} />
+          <SettingsNav roomId={roomId} section={section} />
         </aside>
       )}
 
@@ -82,11 +91,18 @@ export function RoomSettingsScreen({ room, section, className }: RoomSettingsScr
             can never overlap the content, whatever the width. */}
         {!isMobile && <div className="flex justify-end px-6 pt-6">{close}</div>}
         <div className="mx-auto max-w-xl px-4 py-8 md:px-6 md:pt-2 md:pb-12">
-          {section === 'overview' && <OverviewSection key={room.id} room={room} />}
+          {liveUpdatesPaused && (
+            <ConnectionBanner
+              title="Live updates paused, retrying…"
+              description="Changes others make to this room may not show until the connection is back."
+              className="mb-6"
+            />
+          )}
+          {section === 'overview' && <OverviewSection key={roomId} room={room} />}
           {section === 'members' && <MembersSection room={room} />}
           {section === 'invites' && (
             // TODO(api): roomInvitesQueryOptions(room.id), owner/admin only.
-            <InvitesSection room={room} inviteLinks={getSampleInviteLinks(room.id)} />
+            <InvitesSection roomName={roomName} inviteLinks={getSampleInviteLinks(roomId)} />
           )}
           {section === 'channels' && <ChannelsSection room={room} />}
         </div>
