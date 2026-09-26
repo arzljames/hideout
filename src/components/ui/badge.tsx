@@ -22,13 +22,19 @@ const badgeVariants = cva(
         soft: "bg-primary/15 text-primary dark:bg-primary/20",
         /** Quiet neutral label (e.g. Admin role). */
         subtle: "bg-muted text-muted-foreground",
-        /** Small solid count pinned to an icon tile (e.g. pending invites). */
+        /** Small solid count (e.g. pending invites next to a nav item). */
         count:
-          "h-4 min-w-4 rounded-full bg-primary px-1 text-[0.625rem] leading-none text-primary-foreground tabular-nums ring-2 ring-sidebar-rail",
+          "h-4 min-w-4 rounded-full bg-primary px-1 text-[0.625rem] leading-none text-primary-foreground tabular-nums",
+      },
+      /** Pinned over a rail tile: a ring in the rail color cuts it out of the tile. */
+      pinned: {
+        true: "ring-2 ring-sidebar-rail",
+        false: "",
       },
     },
     defaultVariants: {
       variant: "default",
+      pinned: false,
     },
   }
 )
@@ -38,7 +44,10 @@ const Badge = React.forwardRef<
   HTMLSpanElement,
   React.ComponentPropsWithoutRef<"span"> &
     VariantProps<typeof badgeVariants> & { asChild?: boolean }
->(function Badge({ className, variant = "default", asChild = false, ...props }, ref) {
+>(function Badge(
+  { className, variant = "default", pinned = false, asChild = false, ...props },
+  ref
+) {
   const Comp = asChild ? Slot.Root : "span"
 
   return (
@@ -46,7 +55,7 @@ const Badge = React.forwardRef<
       ref={ref}
       data-slot="badge"
       data-variant={variant}
-      className={cn(badgeVariants({ variant }), className)}
+      className={cn(badgeVariants({ variant, pinned }), className)}
       {...props}
     />
   )

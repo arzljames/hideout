@@ -10,15 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as FocusRouteImport } from './routes/_focus'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppInvitesRouteImport } from './routes/_app.invites'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AppRoomsRoomIdRouteImport } from './routes/_app.rooms.$roomId'
 import { Route as AppRoomsRoomIdIndexRouteImport } from './routes/_app.rooms.$roomId.index'
 import { Route as AppRoomsRoomIdChannelIdRouteImport } from './routes/_app.rooms.$roomId.$channelId'
+import { Route as FocusRoomsRoomIdSettingsRouteImport } from './routes/_focus.rooms.$roomId.settings'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FocusRoute = FocusRouteImport.update({
+  id: '/_focus',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignInRoute = SignInRouteImport.update({
@@ -29,6 +36,11 @@ const SignInRoute = SignInRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInvitesRoute = AppInvitesRouteImport.update({
+  id: '/invites',
+  path: '/invites',
   getParentRoute: () => AppRoute,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -51,30 +63,43 @@ const AppRoomsRoomIdChannelIdRoute = AppRoomsRoomIdChannelIdRouteImport.update({
   path: '/$channelId',
   getParentRoute: () => AppRoomsRoomIdRoute,
 } as any)
+const FocusRoomsRoomIdSettingsRoute =
+  FocusRoomsRoomIdSettingsRouteImport.update({
+    id: '/rooms/$roomId/settings',
+    path: '/rooms/$roomId/settings',
+    getParentRoute: () => FocusRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/sign-in': typeof SignInRoute
+  '/invites': typeof AppInvitesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdRouteWithChildren
   '/rooms/$roomId/$channelId': typeof AppRoomsRoomIdChannelIdRoute
+  '/rooms/$roomId/settings': typeof FocusRoomsRoomIdSettingsRoute
   '/rooms/$roomId/': typeof AppRoomsRoomIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/sign-in': typeof SignInRoute
-  '/invite/$token': typeof InviteTokenRoute
   '/': typeof AppIndexRoute
+  '/sign-in': typeof SignInRoute
+  '/invites': typeof AppInvitesRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/rooms/$roomId/$channelId': typeof AppRoomsRoomIdChannelIdRoute
+  '/rooms/$roomId/settings': typeof FocusRoomsRoomIdSettingsRoute
   '/rooms/$roomId': typeof AppRoomsRoomIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/_focus': typeof FocusRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/_app/invites': typeof AppInvitesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/rooms/$roomId': typeof AppRoomsRoomIdRouteWithChildren
   '/_app/rooms/$roomId/$channelId': typeof AppRoomsRoomIdChannelIdRoute
+  '/_focus/rooms/$roomId/settings': typeof FocusRoomsRoomIdSettingsRoute
   '/_app/rooms/$roomId/': typeof AppRoomsRoomIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -82,30 +107,38 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sign-in'
+    | '/invites'
     | '/invite/$token'
     | '/rooms/$roomId'
     | '/rooms/$roomId/$channelId'
+    | '/rooms/$roomId/settings'
     | '/rooms/$roomId/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/sign-in'
-    | '/invite/$token'
     | '/'
+    | '/sign-in'
+    | '/invites'
+    | '/invite/$token'
     | '/rooms/$roomId/$channelId'
+    | '/rooms/$roomId/settings'
     | '/rooms/$roomId'
   id:
     | '__root__'
     | '/_app'
+    | '/_focus'
     | '/sign-in'
+    | '/_app/invites'
     | '/invite/$token'
     | '/_app/'
     | '/_app/rooms/$roomId'
     | '/_app/rooms/$roomId/$channelId'
+    | '/_focus/rooms/$roomId/settings'
     | '/_app/rooms/$roomId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  FocusRoute: typeof FocusRouteWithChildren
   SignInRoute: typeof SignInRoute
   InviteTokenRoute: typeof InviteTokenRoute
 }
@@ -117,6 +150,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_focus': {
+      id: '/_focus'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof FocusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign-in': {
@@ -131,6 +171,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/invites': {
+      id: '/_app/invites'
+      path: '/invites'
+      fullPath: '/invites'
+      preLoaderRoute: typeof AppInvitesRouteImport
       parentRoute: typeof AppRoute
     }
     '/invite/$token': {
@@ -161,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRoomsRoomIdChannelIdRouteImport
       parentRoute: typeof AppRoomsRoomIdRoute
     }
+    '/_focus/rooms/$roomId/settings': {
+      id: '/_focus/rooms/$roomId/settings'
+      path: '/rooms/$roomId/settings'
+      fullPath: '/rooms/$roomId/settings'
+      preLoaderRoute: typeof FocusRoomsRoomIdSettingsRouteImport
+      parentRoute: typeof FocusRoute
+    }
   }
 }
 
@@ -179,19 +233,32 @@ const AppRoomsRoomIdRouteWithChildren = AppRoomsRoomIdRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppInvitesRoute: typeof AppInvitesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppRoomsRoomIdRoute: typeof AppRoomsRoomIdRouteWithChildren
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppInvitesRoute: AppInvitesRoute,
   AppIndexRoute: AppIndexRoute,
   AppRoomsRoomIdRoute: AppRoomsRoomIdRouteWithChildren,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface FocusRouteChildren {
+  FocusRoomsRoomIdSettingsRoute: typeof FocusRoomsRoomIdSettingsRoute
+}
+
+const FocusRouteChildren: FocusRouteChildren = {
+  FocusRoomsRoomIdSettingsRoute: FocusRoomsRoomIdSettingsRoute,
+}
+
+const FocusRouteWithChildren = FocusRoute._addFileChildren(FocusRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  FocusRoute: FocusRouteWithChildren,
   SignInRoute: SignInRoute,
   InviteTokenRoute: InviteTokenRoute,
 }

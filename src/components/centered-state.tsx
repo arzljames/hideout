@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import type { ComponentProps, ReactNode } from 'react'
+import type { ComponentProps, ReactNode, Ref } from 'react'
 import { cn } from '@/lib/utils'
 
 const centeredStateIconVariants = cva(
@@ -27,6 +27,10 @@ interface CenteredStateProps
   description: ReactNode
   /** Buttons or links, stacked below the description. */
   actions?: ReactNode
+  /** Heading level for the title. Use 1 on pages without another h1 (e.g. full-page errors). */
+  titleLevel?: 1 | 2
+  /** Makes the title programmatically focusable (tabIndex -1), e.g. to move focus here. */
+  titleRef?: Ref<HTMLHeadingElement>
 }
 
 /** Centered empty/error message for the main area: icon tile, h2, description, actions. */
@@ -36,9 +40,13 @@ export function CenteredState({
   description,
   actions,
   tone,
+  titleLevel = 2,
+  titleRef,
   className,
   ...props
 }: CenteredStateProps) {
+  const Title = titleLevel === 1 ? 'h1' : 'h2'
+
   return (
     <section
       className={cn(
@@ -48,7 +56,13 @@ export function CenteredState({
       {...props}
     >
       <div className={centeredStateIconVariants({ tone })}>{icon}</div>
-      <h2 className="mt-4 font-heading text-lg font-semibold tracking-tight">{title}</h2>
+      <Title
+        ref={titleRef}
+        tabIndex={titleRef ? -1 : undefined}
+        className="mt-4 font-heading text-lg font-semibold tracking-tight outline-none"
+      >
+        {title}
+      </Title>
       <p className="mt-2 max-w-md text-sm text-balance text-muted-foreground">{description}</p>
       {actions && <div className="mt-6 flex flex-col items-center gap-3">{actions}</div>}
     </section>

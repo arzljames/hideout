@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { ChevronDown, LogOut, Settings, UserPlus } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -9,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import type { Room } from '../sample-room'
+import { getViewerRole, type Room } from '../sample-room'
 import { InviteDialog } from './invite-dialog'
 
 interface RoomMenuProps {
@@ -58,11 +59,16 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
             <UserPlus aria-hidden="true" />
             Invite people
           </DropdownMenuItem>
-          {/* TODO(settings): navigate to /rooms/$roomId/settings once the route exists. */}
-          <DropdownMenuItem>
-            <Settings aria-hidden="true" />
-            Room settings
-          </DropdownMenuItem>
+          {/* Only the owner and admins can change settings; members don't see the item. */}
+          {/* UI-only gate; hideout-api must enforce the role on every settings mutation. */}
+          {getViewerRole(room) !== 'member' && (
+            <DropdownMenuItem asChild>
+              <Link to="/rooms/$roomId/settings" params={{ roomId: room.id }}>
+                <Settings aria-hidden="true" />
+                Room settings
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           {/* TODO(rooms): confirm with an AlertDialog, then leave via the API. */}
           <DropdownMenuItem variant="destructive">

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router'
-import { render, type RenderOptions } from '@testing-library/react'
+import { act, render, type RenderOptions, type RenderResult } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { routeTree } from '@/routeTree.gen'
 import { TestProviders } from './providers'
@@ -40,12 +40,17 @@ export async function renderRoute(path: string, options?: Omit<RenderOptions, 'w
 
   await router.load()
 
-  const result = render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-    { wrapper: TestProviders, ...options },
-  )
+  // Async act: the router keeps settling after the first render (e.g. loading a lazily split
+  // notFound/error component), and those updates must land inside act too.
+  let result!: RenderResult
+  await act(async () => {
+    result = render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+      { wrapper: TestProviders, ...options },
+    )
+  })
 
   return { ...result, router, queryClient }
 }
