@@ -1,18 +1,18 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { AppErrorScreen, AppNotFoundScreen, AppShell } from '@/features/shell'
+import { requireViewer, useSessionGuard } from '@/features/auth'
+import { AppErrorScreen, AppNotFoundScreen, AppShell, AppShellSkeleton } from '@/features/shell'
 
 export const Route = createFileRoute('/_app')({
-  // TODO(auth): both _app and _focus must call a shared `requireViewer(context, location)` in
-  // beforeLoad: ensureQueryData(meQueryOptions), and on 401
-  // throw redirect({ to: '/sign-in', search: { redirect: location.href } }). Add a route test
-  // that /rooms/$roomId/settings redirects to /sign-in. In the same change, sign-in needs a
-  // validateSearch that only accepts a same-origin `redirect` path.
+  beforeLoad: requireViewer,
   component: AppLayout,
-  errorComponent: () => <AppErrorScreen />,
+  pendingComponent: () => <AppShellSkeleton />,
+  errorComponent: ({ error }) => <AppErrorScreen error={error} />,
   notFoundComponent: () => <AppNotFoundScreen />,
 })
 
 function AppLayout() {
+  useSessionGuard()
+
   return (
     <AppShell>
       <Outlet />

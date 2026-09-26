@@ -43,7 +43,7 @@ hideout-web/
 │   ├── hooks/            shared hooks (use-mobile, etc.)
 │   ├── lib/
 │   │   ├── utils.ts      cn() helper
-│   │   ├── api/          schema.d.ts (generated, never edit), client.ts
+│   │   ├── api/          schema.gen.ts (generated, never edit), client.ts
 │   │   ├── supabase.ts
 │   │   ├── queryClient.ts
 │   │   └── env.ts
@@ -65,11 +65,11 @@ npm run lint
 npm run test
 npm run test:e2e          # needs hideout-api running locally
 npm run build
-npm run gen:api           # regenerate src/lib/api/schema.d.ts from hideout-api's openapi.json
+npm run gen:api           # regenerate src/lib/api/schema.gen.ts from hideout-api's openapi.json
 npx shadcn@latest add <component>   # add a shadcn component to src/components/ui
 ```
 
-`gen:api` reads `API_CONTRACT_URL` (default `http://localhost:3001/api/openapi.json`). In CI it points at the deployed API's contract or a pinned file from hideout-api.
+`gen:api` reads `http://localhost:3001/api/contract/openapi.json` into `src/lib/api/schema.gen.ts`. In CI it points at the deployed API's contract or a pinned file from hideout-api.
 
 Done means: `npm run typecheck && npm run lint && npm run test` pass, and `npm run build` succeeds.
 
@@ -93,18 +93,18 @@ Done means: `npm run typecheck && npm run lint && npm run test` pass, and `npm r
 ## TanStack Router rules
 
 - **File-based routes** in `src/routes/`. `routeTree.gen.ts` is generated; never edit it.
-- **Router context** provides `queryClient` and `auth`. Declare it with `createRootRouteWithContext`.
-- **Auth guard:** `_app.tsx` runs `beforeLoad` → `context.queryClient.ensureQueryData(meQueryOptions)`; on 401, `throw redirect({ to: '/sign-in', search: { redirect: location.href } })`.
+- **Router context** provides `queryClient`. Auth state is the `meQueryOptions` query (`null` = signed out), not a context field. Declare it with `createRootRouteWithContext`.
+- **Auth guard:** signed-in layouts (`_app`, `_focus`) use `beforeLoad: requireViewer` from `features/auth`, which runs `context.queryClient.ensureQueryData(meQueryOptions)`; on `null` (401), `throw redirect({ to: '/sign-in', search: { auth_error } })`, forwarding a validated `auth_error` if present. The API can't return to a specific page, so there's no `redirect` param.
 - **Data loading:** loaders call `context.queryClient.ensureQueryData(...)` with `queryOptions` exported from the feature's `api.ts`; components read with `useSuspenseQuery` using the same options. Never fetch in loaders without going through TanStack Query.
-- **Search params** are validated with `validateSearch` (Zod). Examples: `sign-in` takes `redirect?` (same-origin path only) and `login?: 'failed'`.
-- **Navigation** only through typed `Link`, `useNavigate`, and `redirect`. No string-built URLs, no `window.location` except the Steam sign-in link.
+- **Search params** are validated with `validateSearch` (Zod). Example: `/sign-in` and `/` take `auth_error?` (an `AuthRedirectError` code; unknown codes show a generic message).
+- **Navigation** only through typed `Link`, `useNavigate`, and `redirect`. No string-built URLs, no `window.location`/`window.open` except Steam sign-in (`features/auth/steam-popup.ts`).
 - **Errors:** each layout route defines `errorComponent` and `notFoundComponent`. A 404 from the API in a room loader throws `notFound()`, showing the same "room not available" screen for non-members and missing rooms.
 - **Pending UI:** use `pendingComponent` with shadcn `Skeleton`s for route-level loading.
 - Set `defaultPreload: 'intent'` on the router; loaders must be safe to run on hover.
 
 ## The contract with hideout-api
 
-- `src/lib/api/schema.d.ts` is generated. Never edit it. Never hand-write request/response types that duplicate it.
+- `src/lib/api/schema.gen.ts` is generated. Never edit it. Never hand-write request/response types that duplicate it.
 - All HTTP calls go through `src/lib/api/client.ts` (`openapi-fetch`, `credentials: 'include'`, typed errors).
 - If a feature needs an endpoint or field that isn't in the contract, **stop and write it up** as a request for hideout-api (method, path, request, response, error codes, why). Don't invent the shape.
 - Supabase Realtime `messages` rows are also part of the contract. Their type lives in `src/features/messages/types.ts` and every payload is parsed with Zod so schema drift fails loudly.
@@ -113,13 +113,13 @@ Done means: `npm run typecheck && npm run lint && npm run test` pass, and `npm r
 ## Talking to the API
 
 - Dev: the Vite proxy forwards `/api` to `http://localhost:3001`, so it's same-origin and cookies just work.
-- Prod: the API is on a same-site subdomain (e.g. web `app.hideout.gg`, API `api.hideout.gg`). `VITE_API_URL` points at it. Requests use `credentials: 'include'`.
+- Prod: the API is on a same-site subdomain (e.g. web `app.hideout.gg`, API `api.hideout.gg`). `VITE_API_URL` points at it. In dev it is unset, so requests are same-origin through the Vite proxy. Requests use `credentials: 'include'`.
 - If auth works in dev but not prod, check the domains are same-site before touching code. Different registrable domains make the session cookie third-party and browsers block it.
-- Session flow: `GET /api/auth/me` (via `meQueryOptions`) decides signed in vs. not. The "Sign in with Steam" button is a plain anchor to `${API_URL}/api/auth/steam`. After Steam, the API redirects back; `?login=failed` shows the retry state.
+- Session flow: `GET /api/auth/me` (via `meQueryOptions`) decides signed in vs. not. "Sign in with Steam" opens `${VITE_API_URL ?? ''}/api/auth/steam` in a new tab (`openSteamSignIn`); if the tab is blocked it falls back to a full-page navigation. The API redirects to `/` or `/?auth_error=<AuthRedirectError>`. The API's COOP header severs `window.opener`, so the Steam tab is identified by a sessionStorage nonce, reports the result on `BroadcastChannel('hideout-auth')` from `main.tsx`, and closes itself; the sign-in screen refetches `me` on that message and on window focus.
 
 ## Environment
 
-Read env only through `src/lib/env.ts` (Zod-validated `import.meta.env`). Allowed variables: `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Everything with `VITE_` ships to browsers, so **no secrets ever** in this repo. The LiveKit URL comes from the voice-token response, not env.
+Read env only through `src/lib/env.ts` (Zod-validated `import.meta.env`). Allowed variables: `VITE_API_URL` (optional; unset = same-origin), `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Everything with `VITE_` ships to browsers, so **no secrets ever** in this repo. The LiveKit URL comes from the voice-token response, not env.
 
 ## Realtime, voice, and content rules
 
