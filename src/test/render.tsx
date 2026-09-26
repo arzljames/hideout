@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router'
 import { render, type RenderOptions } from '@testing-library/react'
-import type { ReactElement } from 'react'
+import { StrictMode, type ReactElement } from 'react'
+import { registerSessionExpiry } from '@/features/auth'
 import { routeTree } from '@/routeTree.gen'
 import { TestProviders } from './providers'
 
@@ -22,6 +23,7 @@ export function createTestQueryClient() {
 
 /**
  * Render the real route tree at `path` with memory history and a fresh QueryClient.
+ * Pass `strict: true` to render inside StrictMode, as the app does.
  * Resolves once the initial navigation (guards, loaders, lazy route chunks) has settled,
  * so the matched screen is on the page when the promise resolves.
  *
@@ -29,7 +31,10 @@ export function createTestQueryClient() {
  *   const { router } = await renderRoute('/rooms/night-owls/general')
  *   expect(router.state.location.pathname).toBe('/rooms/night-owls/general')
  */
-export async function renderRoute(path: string, options?: Omit<RenderOptions, 'wrapper'>) {
+export async function renderRoute(
+  path: string,
+  { strict = false, ...options }: Omit<RenderOptions, 'wrapper'> & { strict?: boolean } = {},
+) {
   const queryClient = createTestQueryClient()
   const router = createRouter({
     routeTree,
@@ -38,14 +43,21 @@ export async function renderRoute(path: string, options?: Omit<RenderOptions, 'w
     defaultPendingMinMs: 0,
   })
 
+  // Same wiring as main.tsx.
+  registerSessionExpiry(queryClient, router)
+
   await router.load()
 
-  const result = render(
+  const app = (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
-    </QueryClientProvider>,
-    { wrapper: TestProviders, ...options },
+    </QueryClientProvider>
   )
+  // `strict`: render like main.tsx, where StrictMode double-runs effects on mount.
+  const result = render(strict ? <StrictMode>{app}</StrictMode> : app, {
+    wrapper: TestProviders,
+    ...options,
+  })
 
   return { ...result, router, queryClient }
 }

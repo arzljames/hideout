@@ -1,22 +1,23 @@
 import { useParams } from '@tanstack/react-router'
 import { SidebarFooter } from '@/components/ui/sidebar'
+import type { Me } from '@/features/auth'
 import { ChannelPanel, getSampleRoom } from '@/features/rooms'
 import { VoiceConnectionBar } from '@/features/voice'
 import { cn } from '@/lib/utils'
-import type { ShellViewer } from '../sample-viewer'
+import { AccountBar } from './account-bar'
 import { HomePanel } from './home-panel'
-import { UserCard } from './user-card'
 
 interface NavPanelProps {
-  viewer: ShellViewer
+  /** `undefined` while the session is loading; `null` when there's no session to show. */
+  user: Me | null | undefined
   className?: string
 }
 
 /**
  * Second sidebar column: the room's channels when a room is open (Home sections otherwise),
- * then the voice connection bar and user card.
+ * then the voice connection bar and account bar.
  */
-export function NavPanel({ viewer, className }: NavPanelProps) {
+export function NavPanel({ user, className }: NavPanelProps) {
   const { roomId, channelId } = useParams({ strict: false })
   // TODO(api): roomQueryOptions; a room you can't see falls back to the Home panel.
   const room = roomId ? getSampleRoom(roomId) : undefined
@@ -27,7 +28,7 @@ export function NavPanel({ viewer, className }: NavPanelProps) {
 
       <SidebarFooter className="border-t border-sidebar-border">
         <VoiceConnectionBar />
-        <UserCard user={viewer} />
+        <AccountBar user={user} />
       </SidebarFooter>
     </div>
   )

@@ -1,6 +1,9 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { failOnConsoleError } from '@/test/console-guard'
+import { meFixture } from '@/test/fixtures/me'
+import { server } from '@/test/msw/server'
 import { renderRoute } from '@/test/render'
 
 failOnConsoleError()
@@ -44,7 +47,7 @@ describe('AppShell on desktop', () => {
     expect(screen.getByText('Arzl')).toBeInTheDocument()
     expect(screen.getByText('Online')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Arzl, account menu' })).toBeInTheDocument()
   })
 
   it('hides the avatar initial and presence dot from assistive technology', async () => {
@@ -93,6 +96,30 @@ describe('AppShell on desktop', () => {
     await user.tab()
 
     expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveFocus()
+  })
+})
+
+describe('AppShell account bar', () => {
+  it('shows the signed-in user from /api/auth/me, not sample data', async () => {
+    server.use(
+      http.get('*/api/auth/me', () =>
+        HttpResponse.json({
+          ...meFixture,
+          displayName: 'Zed the Great',
+          avatarUrl: 'https://avatars.steamstatic.test/zed.jpg',
+        }),
+      ),
+    )
+
+    await renderShell()
+
+    expect(screen.getByText('Zed the Great')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Zed the Great, account menu' }),
+    ).toBeInTheDocument()
+    // jsdom never loads images, so the initial shows as it would while the avatar loads.
+    expect(screen.getByText('Z').closest('[aria-hidden="true"]')).not.toBeNull()
+    expect(screen.queryByText('Arzl')).not.toBeInTheDocument()
   })
 })
 

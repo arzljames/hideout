@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { vi } from 'vitest'
 import { renderWithProviders } from '@/test/render'
 import { SignInScreen } from './sign-in-screen'
 
@@ -33,17 +34,22 @@ describe('SignInScreen', () => {
     }
   })
 
-  it('keeps the Steam button inert until auth is wired up', async () => {
+  it('starts sign-in from a plain button and announces the popup wait', async () => {
     const user = userEvent.setup()
-    const before = window.location.href
-    renderWithProviders(<SignInScreen />)
+    const onSignIn = vi.fn()
+    const { rerender } = renderWithProviders(<SignInScreen onSignIn={onSignIn} />)
 
     const button = screen.getByRole('button', { name: 'Sign in with Steam' })
     expect(button).toHaveAttribute('type', 'button')
-    await user.click(button)
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
 
-    expect(window.location.href).toBe(before)
-    expect(screen.getByRole('heading', { level: 1, name: 'Hideout' })).toBeInTheDocument()
+    await user.click(button)
+    expect(onSignIn).toHaveBeenCalledTimes(1)
+
+    rerender(<SignInScreen onSignIn={onSignIn} waiting />)
+    expect(screen.getByRole('status')).toHaveTextContent('Finish signing in in the Steam tab.')
+    // Still enabled, so a closed popup can be reopened.
+    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeEnabled()
   })
 
   it('offers a theme toggle', () => {
