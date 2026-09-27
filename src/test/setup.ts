@@ -2,7 +2,6 @@ import '@testing-library/jest-dom/vitest'
 import './polyfills'
 import { cleanup } from '@testing-library/react'
 import { toast } from 'sonner'
-import { resetPendingInvitesStore } from '@/features/invites/pending-invites-store'
 import { resetMessageSender } from '@/features/messages/message-sender'
 import { resetPendingMessagesStore } from '@/features/messages/pending-messages-store'
 import { resetMemberPanelStore } from '@/features/rooms/member-panel-store'
@@ -37,7 +36,7 @@ afterEach(() => {
   // renderRoute registers a handler bound to that test's router and QueryClient.
   setUnauthenticatedHandler(undefined)
   setRealtimeSignedOutHandler(undefined)
-  resetPendingInvitesStore()
+  window.sessionStorage.clear()
   resetMessageSender()
   resetPendingMessagesStore()
   // Realtime is a module singleton too (token manager, topics, the fake client's channels).

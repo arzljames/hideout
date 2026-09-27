@@ -302,11 +302,11 @@ describe('Closing Room settings', () => {
     expect(router.state.location.pathname).toBe(SETTINGS)
   })
 
-  it('closes only the Create invite link dialog on Escape', async () => {
+  it('closes only the Create invite dialog on Escape', async () => {
     const user = userEvent.setup()
     const { router } = await renderRoute(`${SETTINGS}?section=invites`)
 
-    await user.click(screen.getByRole('button', { name: 'Create invite link' }))
+    await user.click(screen.getByRole('button', { name: 'Create invite' }))
     await screen.findByRole('dialog', { name: 'Invite people to Night Owls' })
     await user.keyboard('{Escape}')
 
@@ -318,7 +318,7 @@ describe('Closing Room settings', () => {
     const user = userEvent.setup()
     const { router } = await renderRoute(`${SETTINGS}?section=invites`)
 
-    await user.click(screen.getByRole('button', { name: 'Create invite link' }))
+    await user.click(screen.getByRole('button', { name: 'Create invite' }))
     const dialog = await screen.findByRole('dialog', { name: 'Invite people to Night Owls' })
     await user.click(within(dialog).getByRole('combobox', { name: 'Expire after' }))
     await screen.findByRole('listbox')

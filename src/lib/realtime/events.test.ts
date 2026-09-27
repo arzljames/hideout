@@ -82,6 +82,16 @@ describe('handled events match the pinned contract (events.schema.json)', () => 
     }
   })
 
+  it('the Member inside member:joined matches $defs.Member', () => {
+    const memberDefinition = (contract.$defs as Record<string, EventDefinition>).Member!
+    expect(serverEvents.room?.['member:joined']?.properties?.member).toEqual({ $ref: '#/$defs/Member' })
+    const member = (roomEventSchemas['member:joined'] as z.ZodObject).shape.member as z.ZodObject
+    expect(requiredKeys(member)).toEqual([...(memberDefinition.required ?? [])].sort())
+    for (const key of Object.keys(member.shape)) {
+      expect(memberDefinition.properties ?? {}).toHaveProperty(key)
+    }
+  })
+
   it('the topics we join are private', () => {
     expect(contract.topics.room.private).toBe(true)
     expect(contract.topics.channel.private).toBe(true)
@@ -178,7 +188,8 @@ describe('parseUserEvent', () => {
   it('drops invalid payloads and events other features own', () => {
     expect(parseUserEvent('member:removed', { roomId: 42 })).toBeNull()
     expect(parseUserEvent('session:expired', null)).toBeNull()
-    expect(parseUserEvent('invite:revoked', { inviteId: ROOM_ID })).toBeNull()
+    expect(parseUserEvent('invite:revoked', { inviteId: 'nope' })).toBeNull()
+    expect(parseUserEvent('invite:received', { inviteId: ROOM_ID })).toBeNull()
   })
 })
 

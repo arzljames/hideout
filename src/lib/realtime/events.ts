@@ -49,6 +49,27 @@ const channelSchema: z.ZodType<Schemas['Channel']> = z.object({
   position: z.int(),
 })
 
+const profileSummarySchema: z.ZodType<Schemas['ProfileSummary']> = z.object({
+  id,
+  displayName: z.string(),
+  avatarUrl: z.url({ protocol: /^https?$/ }).nullable(),
+})
+
+// Every contract role, and no others.
+const roleSchema: z.ZodType<Schemas['Role']> = z.enum({
+  owner: 'owner',
+  admin: 'admin',
+  member: 'member',
+} satisfies { [K in Schemas['Role']]: K })
+
+const memberSchema: z.ZodType<Schemas['Member']> = z.object({
+  roomId: id,
+  user: profileSummarySchema,
+  role: roleSchema,
+  joinedAt: timestamp,
+  currentGame: z.string().nullable(),
+})
+
 /** Events on `room:<roomId>` that this app handles. */
 export const roomEventSchemas = {
   'room:updated': z.object({ room: roomSchema }),
@@ -61,17 +82,12 @@ export const roomEventSchemas = {
     channelIds: z.array(id).max(CHANNELS_PER_ROOM_MAX),
   }),
   'channel:deleted': z.object({ id, roomId: id }),
+  'member:joined': z.object({ member: memberSchema }),
 }
 
 // A message body is at most 2000 Unicode code points (MessageBody in the contract). Counted
 // with Array.from (code points, so an emoji counts once); a longer body is rejected, never cut.
 const MESSAGE_BODY_MAX = 2000
-
-const profileSummarySchema: z.ZodType<Schemas['ProfileSummary']> = z.object({
-  id,
-  displayName: z.string(),
-  avatarUrl: z.url({ protocol: /^https?$/ }).nullable(),
-})
 
 const messageSchema: z.ZodType<Schemas['Message']> = z.object({
   id,
@@ -92,8 +108,19 @@ export const channelEventSchemas = {
   'message:deleted': z.object({ id, channelId: id }),
 }
 
+// Same shape as InboxInvite in the OpenAPI contract (GET /api/me/invites entries).
+const inboxInviteSchema: z.ZodType<Schemas['InboxInvite']> = z.object({
+  inviteId: id,
+  room: z.object({ id, name: z.string(), icon: roomIconSchema }),
+  invitedBy: profileSummarySchema,
+  expiresAt: timestamp.nullable(),
+})
+
 /** Events on `user:<profileId>` that this app handles. */
 export const userEventSchemas = {
+  'invite:received': inboxInviteSchema,
+  // Idempotent; can arrive right before a replacement `invite:received`.
+  'invite:revoked': z.object({ inviteId: id }),
   'member:removed': z.object({ roomId: id, banned: z.boolean().optional() }),
   // Empty today; extra keys are allowed so additive changes don't drop it.
   'session:expired': z.object({}),

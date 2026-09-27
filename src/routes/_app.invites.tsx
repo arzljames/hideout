@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { InvitesInbox } from '@/features/invites'
+import { inboxQueryOptions, InvitesInbox, InvitesInboxError, InvitesInboxSkeleton } from '@/features/invites'
 
 export const Route = createFileRoute('/_app/invites')({
-  // TODO(api): loader with ensureQueryData(pendingInvitesQueryOptions).
+  loader: ({ context }) => context.queryClient.ensureQueryData(inboxQueryOptions),
+  pendingComponent: InvitesInboxSkeleton,
+  errorComponent: ({ error }) => <InvitesInboxError error={error} />,
   component: InvitesInbox,
 })

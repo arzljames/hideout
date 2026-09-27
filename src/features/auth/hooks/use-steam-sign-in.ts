@@ -20,6 +20,14 @@ interface SteamSignInState {
 
 const initialState: SteamSignInState = { started: false, waiting: false, authError: undefined }
 
+interface SteamSignInOptions {
+  /**
+   * Go Home once signed in (the sign-in screen). False keeps the current page, which re-renders
+   * from the refreshed `me` (e.g. the invite page swapping "Sign in" for "Join").
+   */
+  goHome?: boolean
+}
+
 /**
  * For the sign-in screen: start Steam sign-in in a new tab and react when it finishes.
  * - The Steam tab announces its result (BroadcastChannel + a localStorage `storage` event); any
@@ -28,7 +36,7 @@ const initialState: SteamSignInState = { started: false, waiting: false, authErr
  *   refreshes.
  * - Returning to this tab (focus / visibilitychange) also refreshes, as a backup.
  */
-export function useSteamSignIn() {
+export function useSteamSignIn({ goHome = true }: SteamSignInOptions = {}) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [state, setState] = useState(initialState)
@@ -37,11 +45,11 @@ export function useSteamSignIn() {
   const refreshSession = useCallback(
     async (goHomeIfSignedIn = true) => {
       await queryClient.refetchQueries({ queryKey: meQueryOptions.queryKey, type: 'all' })
-      if (goHomeIfSignedIn && queryClient.getQueryData(meQueryOptions.queryKey)) {
+      if (goHome && goHomeIfSignedIn && queryClient.getQueryData(meQueryOptions.queryKey)) {
         await navigate({ to: '/', replace: true })
       }
     },
-    [queryClient, navigate],
+    [queryClient, navigate, goHome],
   )
 
   useEffect(() => {

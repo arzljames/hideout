@@ -26,8 +26,7 @@ describe('AppShell on desktop', () => {
     await renderShell()
 
     const rail = screen.getByRole('navigation', { name: 'Rooms' })
-    // Home is a link now, and its name includes the pending invite count.
-    expect(within(rail).getByRole('link', { name: 'Home, 3 pending invites' })).toHaveAttribute(
+    expect(within(rail).getByRole('link', { name: 'Home' })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -38,8 +37,7 @@ describe('AppShell on desktop', () => {
     await renderShell()
 
     const sections = screen.getByRole('navigation', { name: 'Home sections' })
-    // Invites is a link to the inbox now, named with its pending count.
-    expect(within(sections).getByRole('link', { name: 'Invites 3 pending' })).toHaveAttribute(
+    expect(within(sections).getByRole('link', { name: 'Invites' })).toHaveAttribute(
       'href',
       '/invites',
     )
