@@ -1,6 +1,5 @@
 import { MoreHorizontal } from 'lucide-react'
-import { Fragment, useRef } from 'react'
-import { Button } from '@/components/ui/button'
+import { Fragment, useRef, type RefObject } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,37 +7,49 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { MemberMenuAction, MemberMenuEntry } from '@/features/members'
+import { SidebarMenuAction } from '@/components/ui/sidebar'
+import type { MemberMenuAction, MemberMenuEntry } from '../member-menu-entries'
 
 interface MemberActionsMenuProps {
   memberName: string
   entries: MemberMenuEntry[]
+  /** The … button; dialogs opened from here or the context menu return focus to it. */
+  triggerRef: RefObject<HTMLButtonElement>
   onAction: (action: MemberMenuAction, returnFocus: HTMLElement | null) => void
-  /** A role change is in flight: role items wait until it settles. */
+  /** A role change is in flight: role items are disabled until it (and any refetch) settles. */
   busy?: boolean
 }
 
-/** "Actions for Maya" menu in Room settings: Make/Remove admin and Remove from room. */
-export function MemberActionsMenu({ memberName, entries, onAction, busy = false }: MemberActionsMenuProps) {
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  // Confirmations open after the menu has closed, so the focus scopes don't fight.
+/**
+ * "Member options for {name}" (…) menu on a sidebar member row. Shown on row hover or focus on
+ * desktop, always below md (SidebarMenuAction `showOnHover`). Confirmations open after the menu
+ * has closed and restored focus, so the focus scopes don't fight.
+ */
+export function MemberActionsMenu({
+  memberName,
+  entries,
+  triggerRef,
+  onAction,
+  busy = false,
+}: MemberActionsMenuProps) {
   const requested = useRef<MemberMenuAction | null>(null)
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
+        <SidebarMenuAction
           ref={triggerRef}
           type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Actions for ${memberName}`}
+          showOnHover
+          aria-label={`Member options for ${memberName}`}
+          className="top-1/2 -translate-y-1/2"
         >
           <MoreHorizontal aria-hidden="true" />
-        </Button>
+        </SidebarMenuAction>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align="end"
+        side="left"
+        align="start"
         className="w-48"
         onCloseAutoFocus={(event) => {
           const action = requested.current

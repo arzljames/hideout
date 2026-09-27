@@ -242,7 +242,8 @@ describe('Overview and changes from elsewhere', () => {
 
     await waitFor(() => expect(previewShows('🔥')).toBe(true), { timeout: 3000 })
     expect(name).toHaveValue('Owl Parliament')
-    expect(save).toBeEnabled()
+    // The form re-derives its dirty state on its own render, which can trail the preview.
+    await waitFor(() => expect(save).toBeEnabled())
   })
 
   it('toasts once and goes Home when the room is gone on save (404)', async () => {

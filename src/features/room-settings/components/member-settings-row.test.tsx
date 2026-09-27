@@ -25,8 +25,6 @@ async function joinedTextIn(timeZone: string, joinedAt: string) {
             currentGame: null,
           }}
           isViewer={false}
-          roomName="Night Owls"
-          viewerRole="member"
         />
       </ul>,
     )

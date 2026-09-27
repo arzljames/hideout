@@ -92,6 +92,13 @@ describe('handled events match the pinned contract (events.schema.json)', () => 
     }
   })
 
+  it('the role in member:role_changed is $defs.Role, and we accept exactly its values', () => {
+    const roleDefinition = (contract.$defs as Record<string, { enum?: string[] }>).Role!
+    expect(serverEvents.room?.['member:role_changed']?.properties?.role).toEqual({ $ref: '#/$defs/Role' })
+    const role = (roomEventSchemas['member:role_changed'] as z.ZodObject).shape.role as z.ZodEnum
+    expect([...role.options].sort()).toEqual([...(roleDefinition.enum ?? [])].sort())
+  })
+
   it('the topics we join are private', () => {
     expect(contract.topics.room.private).toBe(true)
     expect(contract.topics.channel.private).toBe(true)

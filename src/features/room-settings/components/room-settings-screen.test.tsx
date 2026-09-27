@@ -345,6 +345,7 @@ describe('Room settings keyboard order', () => {
       screen.getByRole('button', { name: 'Upload image' }),
       screen.getByRole('textbox', { name: 'Room name' }),
       // Save changes is disabled until the form changes, so it's skipped here.
+      screen.getByRole('button', { name: 'Transfer ownership' }),
       screen.getByRole('button', { name: 'Delete room' }),
     ]
     for (const element of expected) {

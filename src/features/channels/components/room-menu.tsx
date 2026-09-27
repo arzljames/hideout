@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { InviteDialog } from '@/features/invites'
+import { LeaveRoomDialog } from '@/features/members'
 import type { RoomDetail } from '@/features/rooms'
 
 interface RoomMenuProps {
@@ -25,6 +26,9 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
   // "Invite people" waits for the menu to finish closing (and restoring focus) before the
   // dialog opens, so the two focus scopes don't fight.
   const inviteRequested = useRef(false)
+  const [leaveOpen, setLeaveOpen] = useState(false)
+  const [leaveCount, setLeaveCount] = useState(0)
+  const leaveRequested = useRef(false)
 
   return (
     <>
@@ -48,6 +52,11 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
               inviteRequested.current = false
               event.preventDefault()
               setInviteOpen(true)
+            } else if (leaveRequested.current) {
+              leaveRequested.current = false
+              event.preventDefault()
+              setLeaveCount((count) => count + 1)
+              setLeaveOpen(true)
             }
           }}
         >
@@ -69,12 +78,21 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
               </Link>
             </DropdownMenuItem>
           )}
-          <DropdownMenuSeparator />
-          {/* TODO(rooms): confirm with an AlertDialog, then leave via the API. */}
-          <DropdownMenuItem variant="destructive">
-            <LogOut aria-hidden="true" />
-            Leave room
-          </DropdownMenuItem>
+          {/* The owner can't leave (409 OWNER_PROTECTED): transfer ownership or delete first. */}
+          {room.myRole !== 'owner' && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => {
+                  leaveRequested.current = true
+                }}
+              >
+                <LogOut aria-hidden="true" />
+                Leave room
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -84,6 +102,15 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
         myRole={room.myRole}
         open={inviteOpen}
         onOpenChange={setInviteOpen}
+        returnFocusRef={triggerRef}
+      />
+
+      <LeaveRoomDialog
+        key={leaveCount}
+        roomId={room.room.id}
+        roomName={room.room.name}
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
         returnFocusRef={triggerRef}
       />
     </>

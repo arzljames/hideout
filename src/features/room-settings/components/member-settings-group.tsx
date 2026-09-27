@@ -1,5 +1,6 @@
 import { useId } from 'react'
-import type { Member, Role } from '@/features/rooms'
+import { memberActions, memberMenuEntries, type MemberMenuAction } from '@/features/members'
+import { sameRoomId, type Member, type Role } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 import { MemberSettingsRow } from './member-settings-row'
 
@@ -9,7 +10,8 @@ interface MemberSettingsGroupProps {
   members: Member[]
   viewerId: string | undefined
   viewerRole: Role
-  roomName: string
+  onAction: (member: Member, action: MemberMenuAction, returnFocus: HTMLElement | null) => void
+  busy?: boolean
   className?: string
 }
 
@@ -19,7 +21,8 @@ export function MemberSettingsGroup({
   members,
   viewerId,
   viewerRole,
-  roomName,
+  onAction,
+  busy,
   className,
 }: MemberSettingsGroupProps) {
   const headingId = useId()
@@ -38,9 +41,14 @@ export function MemberSettingsGroup({
           <MemberSettingsRow
             key={member.user.id}
             member={member}
-            isViewer={member.user.id === viewerId}
-            roomName={roomName}
-            viewerRole={viewerRole}
+            isViewer={viewerId !== undefined && sameRoomId(member.user.id, viewerId)}
+            // UI-only gate; hideout-api enforces the role on every member write. Transfer
+            // ownership lives in Overview → Danger zone here.
+            entries={memberMenuEntries(member, memberActions(viewerRole, member, viewerId), {
+              transfer: false,
+            })}
+            onAction={(action, returnFocus) => onAction(member, action, returnFocus)}
+            busy={busy}
           />
         ))}
       </ul>

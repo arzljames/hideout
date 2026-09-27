@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { meQueryOptions } from '@/features/auth'
+import { MemberActionDialogs, useMemberActions } from '@/features/members'
 import { groupMembersByRole, type RoomDetail } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 import { MemberSettingsGroup } from './member-settings-group'
@@ -21,6 +22,8 @@ export function MembersSection({ room, className }: MembersSectionProps) {
   const searchId = useId()
   const viewerId = useQuery(meQueryOptions).data?.id
   const [query, setQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+  const actions = useMemberActions(room.room.id)
   const trimmed = query.trim().toLowerCase()
   const members = trimmed
     ? room.members.filter((member) => member.user.displayName.toLowerCase().includes(trimmed))
@@ -49,6 +52,7 @@ export function MembersSection({ room, className }: MembersSectionProps) {
           className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
         />
         <Input
+          ref={searchRef}
           id={searchId}
           type="search"
           placeholder="Search members"
@@ -70,9 +74,19 @@ export function MembersSection({ room, className }: MembersSectionProps) {
           members={group.members}
           viewerId={viewerId}
           viewerRole={room.myRole}
-          roomName={room.room.name}
+          onAction={actions.run}
+          busy={actions.changingRole}
         />
       ))}
+
+      <MemberActionDialogs
+        room={room}
+        request={actions.request}
+        open={actions.open}
+        onOpenChange={actions.setOpen}
+        // The removed member's row is gone: land on the search field.
+        fallbackFocus={() => searchRef.current}
+      />
     </div>
   )
 }

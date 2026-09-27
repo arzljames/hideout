@@ -11,12 +11,16 @@ import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { useMemberPanelStore } from '../member-panel-store'
 import type { RoomDetail } from '../types'
-import { MemberList } from './member-list'
 
 interface RoomLayoutProps {
   room: RoomDetail
   /** The channel column (header, content, composer). */
   children: ReactNode
+  /**
+   * The member panel's content for a given className (the members feature's MemberList; rooms
+   * can't import it). Rendered inline from `md` up and in the Sheet below.
+   */
+  renderMembers: (className: string) => ReactNode
   /** Live updates for the room are down (see useRoomEvents): show a banner over the channel. */
   liveUpdatesPaused?: boolean
   className?: string
@@ -27,7 +31,13 @@ interface RoomLayoutProps {
  * right-hand Sheet below. The Sheet root wraps the whole room so MemberPanelToggle (in the
  * channel header) can be its real trigger.
  */
-export function RoomLayout({ room, children, liveUpdatesPaused, className }: RoomLayoutProps) {
+export function RoomLayout({
+  room,
+  children,
+  renderMembers,
+  liveUpdatesPaused,
+  className,
+}: RoomLayoutProps) {
   const { isMobile } = useSidebar()
   const panelOpen = useMemberPanelStore((s) => s.open)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -51,12 +61,7 @@ export function RoomLayout({ room, children, liveUpdatesPaused, className }: Roo
           )}
           {children}
         </div>
-        {!isMobile && panelOpen && (
-          <MemberList
-            members={room.members}
-            className="w-60 shrink-0 border-l border-sidebar-border"
-          />
-        )}
+        {!isMobile && panelOpen && renderMembers('w-60 shrink-0 border-l border-sidebar-border')}
       </div>
 
       {isMobile && (
@@ -65,7 +70,7 @@ export function RoomLayout({ room, children, liveUpdatesPaused, className }: Roo
             <SheetTitle>Members</SheetTitle>
             <SheetDescription className="sr-only">People in {room.room.name}</SheetDescription>
           </SheetHeader>
-          <MemberList members={room.members} className="flex-1" />
+          {renderMembers('flex-1')}
         </SheetContent>
       )}
     </Sheet>
