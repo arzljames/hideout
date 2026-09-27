@@ -83,7 +83,7 @@ describe('AccountMenu', () => {
 
       await user.click(within(menu).getByRole('menuitem', { name: 'Sign out' }))
 
-      expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
       expect(router.state.location.pathname).toBe('/sign-in')
       expect(requests).toHaveLength(1)
       expect(requests[0]?.headers.get('Content-Type')).toBe('application/json')
@@ -101,7 +101,7 @@ describe('AccountMenu', () => {
 
       await user.click(within(menu).getByRole('menuitem', { name: 'Sign out' }))
 
-      expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
       await waitFor(() => expect(queryClient.getQueryData(['rooms'])).toBeUndefined())
       expect(queryClient.getQueryData(['auth', 'me'])).toBeNull()
       expect(useVoiceSession.getState().muted).toBe(false)
@@ -116,7 +116,7 @@ describe('AccountMenu', () => {
 
       await user.click(within(menu).getByRole('menuitem', { name: 'Sign out' }))
 
-      expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
       expect(getRealtimeStatus()).toBe('idle')
       expect(getRealtimeAccessToken()).toBeNull()
       expect(fakeSupabase.realtime.disconnect).toHaveBeenCalled()
@@ -129,7 +129,7 @@ describe('AccountMenu', () => {
 
       await user.click(within(menu).getByRole('menuitem', { name: 'Sign out' }))
 
-      expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
       expect(router.state.location.pathname).toBe('/sign-in')
       expect(screen.queryByText(SIGN_OUT_FAILED)).not.toBeInTheDocument()
     })
@@ -239,7 +239,7 @@ describe('AccountMenu', () => {
 
       await user.click(within(dialog).getByRole('button', { name: 'Sign out everywhere' }))
 
-      expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
       expect(router.state.location.pathname).toBe('/sign-in')
       expect(requests).toHaveLength(1)
       expect(requests[0]?.headers.get('Content-Type')).toBe('application/json')
@@ -252,7 +252,7 @@ describe('AccountMenu', () => {
 
       await user.click(within(dialog).getByRole('button', { name: 'Sign out everywhere' }))
 
-      expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
       expect(router.state.location.pathname).toBe('/sign-in')
     })
 

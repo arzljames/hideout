@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { vi } from 'vitest'
+import { apiUrl } from '@/lib/api/client'
 import { failOnConsoleError } from '@/test/console-guard'
 import { nightOwls, roomPath } from '@/test/fixtures/rooms'
 import { apiError } from '@/test/msw/invites'
@@ -42,20 +42,21 @@ describe('/invite/$token', () => {
   it('signed out: stores the token before Steam sign-in, and Home sends it back here', async () => {
     servePreview()
     server.use(http.get('*/api/auth/me', () => apiError(401, 'UNAUTHENTICATED', 'Sign in.')))
-    const popup = { opener: {}, location: { href: '' }, focus: vi.fn() }
-    const open = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window)
+    // jsdom can't navigate; cancel it after React's onClick has run (the app never preventDefaults).
+    const blockNavigation = (event: MouseEvent) => event.preventDefault()
+    document.addEventListener('click', blockNavigation)
     const user = userEvent.setup()
     const first = await renderRoute(INVITE_PATH)
 
     expect(screen.getByRole('heading', { level: 1, name: 'Night Owls' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Sign in with Steam to join' }))
+    const link = screen.getByRole('link', { name: 'Sign in with Steam to join' })
+    expect(link).toHaveAttribute('href', apiUrl('/api/auth/steam'))
+    await user.click(link)
     expect(window.sessionStorage.getItem('hideout:pending-invite')).toBe(TOKEN)
-    expect(screen.getByRole('status')).toHaveTextContent('Finish signing in in the Steam tab.')
-    expect(open).toHaveBeenCalledTimes(1)
-    open.mockRestore()
+    document.removeEventListener('click', blockNavigation)
     first.unmount()
 
-    // The same-tab fallback: the API lands the now signed-in user on `/`.
+    // The API lands the now signed-in user on `/`.
     server.resetHandlers()
     servePreview()
     const { router } = await renderRoute('/')

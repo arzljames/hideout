@@ -2,7 +2,6 @@ import type { QueryClient } from '@tanstack/react-query'
 import { redirect, type ParsedLocation } from '@tanstack/react-router'
 import { meQueryOptions } from './api'
 import { authErrorSearchSchema } from './auth-errors'
-import { announceSignedInOnce } from './steam-popup'
 
 /** Layout routes that require a signed-in user. */
 export const SIGNED_IN_LAYOUT_IDS = ['/_app', '/_focus'] as const
@@ -24,7 +23,5 @@ export async function requireViewer({ context, location }: RequireViewerOptions)
     const { auth_error } = authErrorSearchSchema.parse(location.search)
     throw redirect({ to: '/sign-in', search: { auth_error } })
   }
-  // Lets a sign-in tab waiting on Steam notice this session.
-  announceSignedInOnce()
   return { me }
 }

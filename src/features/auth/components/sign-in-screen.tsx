@@ -2,27 +2,18 @@ import { CircleAlert, LogIn } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { apiUrl } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import { authErrorMessage } from '../auth-errors'
-import { openSteamSignIn } from '../steam-popup'
 import { BrandAvatars } from './brand-avatars'
 
 interface SignInScreenProps {
   /** `auth_error` code from a failed Steam sign-in; unknown codes show a generic message. */
   authError?: string
-  /** Starts Steam sign-in. Defaults to opening the popup with no waiting state. */
-  onSignIn?: () => void
-  /** A popup is open and we're waiting for it to report back. */
-  waiting?: boolean
   className?: string
 }
 
-export function SignInScreen({
-  authError,
-  onSignIn = openSteamSignIn,
-  waiting = false,
-  className,
-}: SignInScreenProps) {
+export function SignInScreen({ authError, className }: SignInScreenProps) {
   return (
     <div className={cn('relative flex min-h-svh flex-col', className)}>
       <header className="absolute top-4 right-4">
@@ -44,22 +35,15 @@ export function SignInScreen({
           </Alert>
         )}
 
-        {/* Opens Steam in a popup; stays enabled so a closed popup can be reopened. */}
-        <Button
-          type="button"
-          size="lg"
-          className={cn('w-full', authError ? 'mt-4' : 'mt-8')}
-          onClick={() => onSignIn()}
-        >
-          <LogIn aria-hidden="true" />
-          Sign in with Steam
+        {/* Same-tab, full-page navigation: the API redirects back to `/` or `/?auth_error=`. */}
+        <Button asChild size="lg" className={cn('w-full', authError ? 'mt-4' : 'mt-8')}>
+          <a href={apiUrl('/api/auth/steam')}>
+            <LogIn aria-hidden="true" />
+            Sign in with Steam
+          </a>
         </Button>
-        {/* Always mounted, so the message is announced when it appears. */}
-        <p role="status" aria-live="polite" className="mt-3 min-h-4 text-xs text-muted-foreground">
-          {waiting ? 'Finish signing in in the Steam tab.' : null}
-        </p>
 
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-4 text-xs text-muted-foreground">
           Hideout only reads your public profile: name, avatar and current game.
         </p>
       </main>

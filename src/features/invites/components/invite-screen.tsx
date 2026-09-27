@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 import { TopBar } from '@/components/top-bar'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { authErrorMessage, meQueryOptions, useSteamSignIn } from '@/features/auth'
-import { ApiError } from '@/lib/api/client'
+import { meQueryOptions } from '@/features/auth'
+import { ApiError, apiUrl } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 import { invitePreviewQueryOptions, useRedeemInvite } from '../api'
 import { inviteErrorMessage, isInviteGone } from '../invite-errors'
@@ -19,27 +19,20 @@ interface InviteScreenProps {
 }
 
 /**
- * The link invite page: preview, then Join (signed in) or "Sign in with Steam to join". Sign-in
- * opens Steam in a new tab and this page refreshes `me` when it reports back; the token is kept
- * in sessionStorage in case sign-in falls back to a full-page redirect (Home sends it back here).
+ * The link invite page: preview, then Join (signed in) or "Sign in with Steam to join". Sign-in is
+ * a same-tab navigation; the token is kept in sessionStorage so Home sends the user back here.
  */
 export function InviteScreen({ token, className }: InviteScreenProps) {
   useNoReferrer()
   const { data: preview } = useSuspenseQuery(invitePreviewQueryOptions(token))
   // Can't tell (offline, 5xx) counts as signed out: the sign-in button is still useful.
   const viewer = useQuery(meQueryOptions).data ?? null
-  const steam = useSteamSignIn({ goHome: false })
   const redeem = useRedeemInvite(token)
 
   const signedIn = viewer !== null
   useEffect(() => {
     if (signedIn) clearPendingInviteToken()
   }, [signedIn])
-
-  function signIn() {
-    storePendingInviteToken(token)
-    steam.start()
-  }
 
   const redeemError = redeem.error
   // Retrying won't help once the invite is gone or the viewer is banned.
@@ -79,23 +72,13 @@ export function InviteScreen({ token, className }: InviteScreenProps) {
               </p>
             </>
           ) : (
-            <>
-              {steam.authError && (
-                <Alert variant="destructive" className="text-left">
-                  <CircleAlert aria-hidden="true" />
-                  <AlertTitle>Couldn&apos;t sign you in</AlertTitle>
-                  <AlertDescription>{authErrorMessage(steam.authError)}</AlertDescription>
-                </Alert>
-              )}
-              {/* Stays enabled so a closed Steam tab can be reopened. */}
-              <Button type="button" size="lg" className="w-full" onClick={signIn}>
+            // Store the token just before the full-page navigation (no preventDefault).
+            <Button asChild size="lg" className="w-full">
+              <a href={apiUrl('/api/auth/steam')} onClick={() => storePendingInviteToken(token)}>
                 <LogIn aria-hidden="true" />
                 Sign in with Steam to join
-              </Button>
-              <p role="status" className="min-h-4 text-xs text-muted-foreground">
-                {steam.waiting ? 'Finish signing in in the Steam tab.' : null}
-              </p>
-            </>
+              </a>
+            </Button>
           )}
         </InviteCard>
       </main>

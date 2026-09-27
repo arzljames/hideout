@@ -97,7 +97,7 @@ Done means: `npm run typecheck && npm run lint && npm run test` pass, and `npm r
 - **Auth guard:** signed-in layouts (`_app`, `_focus`) use `beforeLoad: requireViewer` from `features/auth`, which runs `context.queryClient.ensureQueryData(meQueryOptions)`; on `null` (401), `throw redirect({ to: '/sign-in', search: { auth_error } })`, forwarding a validated `auth_error` if present. The API can't return to a specific page, so there's no `redirect` param.
 - **Data loading:** loaders call `context.queryClient.ensureQueryData(...)` with `queryOptions` exported from the feature's `api.ts`; components read with `useSuspenseQuery` using the same options. Never fetch in loaders without going through TanStack Query.
 - **Search params** are validated with `validateSearch` (Zod). Example: `/sign-in` and `/` take `auth_error?` (an `AuthRedirectError` code; unknown codes show a generic message).
-- **Navigation** only through typed `Link`, `useNavigate`, and `redirect`. No string-built URLs, no `window.location`/`window.open` except Steam sign-in (`features/auth/steam-popup.ts`).
+- **Navigation** only through typed `Link`, `useNavigate`, and `redirect`. No string-built URLs, no `window.location`/`window.open`; the only exception is the Steam sign-in link, a plain anchor built with `apiUrl('/api/auth/steam')`.
 - **Errors:** each layout route defines `errorComponent` and `notFoundComponent`. A 404 from the API in a room loader throws `notFound()`, showing the same "room not available" screen for non-members and missing rooms.
 - **Pending UI:** use `pendingComponent` with shadcn `Skeleton`s for route-level loading.
 - Set `defaultPreload: 'intent'` on the router; loaders must be safe to run on hover.
@@ -115,7 +115,7 @@ Done means: `npm run typecheck && npm run lint && npm run test` pass, and `npm r
 - Dev: the Vite proxy forwards `/api` to `http://localhost:3001`, so it's same-origin and cookies just work.
 - Prod: the API is on a same-site subdomain (e.g. web `app.hideout.gg`, API `api.hideout.gg`). `VITE_API_URL` points at it. In dev it is unset, so requests are same-origin through the Vite proxy. Requests use `credentials: 'include'`.
 - If auth works in dev but not prod, check the domains are same-site before touching code. Different registrable domains make the session cookie third-party and browsers block it.
-- Session flow: `GET /api/auth/me` (via `meQueryOptions`) decides signed in vs. not. "Sign in with Steam" opens `${VITE_API_URL ?? ''}/api/auth/steam` in a new tab (`openSteamSignIn`); if the tab is blocked it falls back to a full-page navigation. The API redirects to `/` or `/?auth_error=<AuthRedirectError>`. The API's COOP header severs `window.opener`, so the Steam tab is identified by a sessionStorage nonce, reports the result on `BroadcastChannel('hideout-auth')` from `main.tsx`, and closes itself; the sign-in screen refetches `me` on that message and on window focus.
+- Session flow: `GET /api/auth/me` (via `meQueryOptions`) decides signed in vs. not. The "Sign in with Steam" button is a plain anchor to `${VITE_API_URL ?? ''}/api/auth/steam` (same tab); the API redirects back to `/` or `/?auth_error=<AuthRedirectError>`.
 
 ## Environment
 
