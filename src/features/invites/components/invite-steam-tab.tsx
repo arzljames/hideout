@@ -29,11 +29,13 @@ const FIELD_CONFLICTS = new Set(['ALREADY_MEMBER', 'INVITE_ALREADY_PENDING', 'US
 
 interface InviteSteamTabProps {
   roomId: string
+  /** Called after the invite is sent (the dialog closes). */
+  onSent?: () => void
   className?: string
 }
 
 /** Invite one Steam account by SteamID64 (any member). */
-export function InviteSteamTab({ roomId, className }: InviteSteamTabProps) {
+export function InviteSteamTab({ roomId, onSent, className }: InviteSteamTabProps) {
   const ids = { input: useId(), hint: useId(), error: useId() }
   const create = useCreateInvite(roomId)
   const form = useForm<SteamInviteValues>({
@@ -49,6 +51,7 @@ export function InviteSteamTab({ roomId, className }: InviteSteamTabProps) {
         onSuccess: () => {
           toast.success('Invite sent')
           form.reset()
+          onSent?.()
         },
         onError: (error) => {
           const onField =
