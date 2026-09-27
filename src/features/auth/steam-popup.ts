@@ -20,7 +20,6 @@ import { authErrorSearchSchema } from './auth-errors'
  */
 
 const STORAGE_KEY = 'hideout:steam-popup'
-const WINDOW_NAME = 'hideout-steam-sign-in'
 
 export const AUTH_CHANNEL_NAME = 'hideout-auth'
 export const AUTH_SIGNAL_KEY = 'hideout:auth-signal'
@@ -82,18 +81,28 @@ export function openSteamSignIn(): string | null {
   const url = apiUrl('/api/auth/steam')
   const nonce = crypto.randomUUID()
   let popup: Window | null = null
+  let opened: Window | null = null
 
   try {
     window.sessionStorage.setItem(STORAGE_KEY, nonce)
     // Open blank first (same-origin, so we keep a handle and the sessionStorage copy), then cut
     // the opener before navigating. Pages in the Steam flow can't reach this tab even if a
     // response ever arrives without the API's COOP header.
-    popup = window.open('', WINDOW_NAME)
-    if (popup) {
-      popup.opener = null
-      popup.location.href = url
+    // Always a fresh, unnamed tab: a named one would hand back a leftover tab from an earlier
+    // attempt, now on Steam's (cross-origin) page, where touching `opener` throws.
+    opened = window.open('', '_blank')
+    if (opened) {
+      opened.opener = null
+      opened.location.href = url
+      popup = opened
     }
   } catch {
+    // Opened but couldn't be pointed at Steam: close it rather than leave a blank tab behind.
+    try {
+      opened?.close()
+    } catch {
+      // Already gone.
+    }
     popup = null
   } finally {
     // Only the new tab's copy should keep the nonce, otherwise this tab would later mistake
