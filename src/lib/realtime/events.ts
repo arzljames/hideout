@@ -63,6 +63,35 @@ export const roomEventSchemas = {
   'channel:deleted': z.object({ id, roomId: id }),
 }
 
+// A message body is at most 2000 Unicode code points (MessageBody in the contract). Counted
+// with Array.from (code points, so an emoji counts once); a longer body is rejected, never cut.
+const MESSAGE_BODY_MAX = 2000
+
+const profileSummarySchema: z.ZodType<Schemas['ProfileSummary']> = z.object({
+  id,
+  displayName: z.string(),
+  avatarUrl: z.url({ protocol: /^https?$/ }).nullable(),
+})
+
+const messageSchema: z.ZodType<Schemas['Message']> = z.object({
+  id,
+  channelId: id,
+  // null: the author's profile was deleted.
+  author: profileSummarySchema.nullable(),
+  body: z.string().refine((body) => Array.from(body).length <= MESSAGE_BODY_MAX, {
+    message: `At most ${MESSAGE_BODY_MAX} code points`,
+  }),
+  createdAt: timestamp,
+  editedAt: timestamp.nullable(),
+})
+
+/** Events on `channel:<channelId>` (a text channel's messages) that this app handles. */
+export const channelEventSchemas = {
+  'message:created': z.object({ message: messageSchema }),
+  'message:updated': z.object({ message: messageSchema }),
+  'message:deleted': z.object({ id, channelId: id }),
+}
+
 /** Events on `user:<profileId>` that this app handles. */
 export const userEventSchemas = {
   'member:removed': z.object({ roomId: id, banned: z.boolean().optional() }),
@@ -78,6 +107,7 @@ export type ParsedEvent<S extends EventSchemas> = {
 }[keyof S & string]
 
 export type RoomEvent = ParsedEvent<typeof roomEventSchemas>
+export type ChannelEvent = ParsedEvent<typeof channelEventSchemas>
 export type UserEvent = ParsedEvent<typeof userEventSchemas>
 
 /**
@@ -107,6 +137,10 @@ export function parseRoomEvent(event: string, payload: unknown): RoomEvent | nul
   return parseEvent(roomEventSchemas, event, payload)
 }
 
+export function parseChannelEvent(event: string, payload: unknown): ChannelEvent | null {
+  return parseEvent(channelEventSchemas, event, payload)
+}
+
 export function parseUserEvent(event: string, payload: unknown): UserEvent | null {
   return parseEvent(userEventSchemas, event, payload)
 }
@@ -114,5 +148,6 @@ export function parseUserEvent(event: string, payload: unknown): UserEvent | nul
 /** Topic names. Lowercase ids: hideout-api broadcasts to lowercase topics, matched exactly. */
 export const realtimeTopics = {
   room: (roomId: string) => `room:${roomId.toLowerCase()}`,
+  channel: (channelId: string) => `channel:${channelId.toLowerCase()}`,
   user: (profileId: string) => `user:${profileId.toLowerCase()}`,
 }

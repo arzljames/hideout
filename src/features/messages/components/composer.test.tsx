@@ -57,15 +57,31 @@ describe('Composer', () => {
     expect(composer).toHaveValue('   ')
   })
 
-  it('caps messages at 2000 characters', async () => {
+  it('counts code points, and blocks sending over 2000', async () => {
     const { user, composer } = await renderComposer()
-    expect(composer).toHaveAttribute('maxLength', '2000')
+    expect(composer).not.toHaveAttribute('maxLength')
 
     await user.click(composer)
-    await user.paste('x'.repeat(2005))
-
-    expect(composer).toHaveValue('x'.repeat(2000))
+    await user.paste(String.fromCodePoint(0x1f989).repeat(2000))
     expect(composer).toHaveAccessibleDescription(/2000 \/ 2000 characters$/)
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled()
+
+    await user.paste('x')
+    expect(composer).toHaveAccessibleDescription(/^At most 2000 characters .*2001 \/ 2000 characters$/)
+    expect(composer).toBeInvalid()
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
+  })
+
+  it('does not send invisible-only text', async () => {
+    const { user, composer } = await renderComposer()
+    const invisible = String.fromCodePoint(0x200b, 0x2800)
+
+    await user.click(composer)
+    await user.paste(invisible)
+    await user.keyboard('{Enter}')
+
+    expect(composer).toHaveValue(invisible)
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
   })
 
   it('offers a Send button that is disabled until there is something to send', async () => {
@@ -105,12 +121,6 @@ describe('Composer', () => {
     const { composer } = await renderComposer()
 
     expect(composer).toHaveAttribute('enterkeyhint', 'send')
-  })
-
-  it('has a labelled emoji button', async () => {
-    await renderComposer()
-
-    expect(screen.getByRole('button', { name: 'Add emoji' })).toBeInTheDocument()
   })
 
   it('labels the composer with the open channel', async () => {

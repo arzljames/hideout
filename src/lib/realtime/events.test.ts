@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import contract from './events.schema.json'
 import {
+  channelEventSchemas,
+  parseChannelEvent,
   parseRoomEvent,
   parseUserEvent,
   realtimeTopics,
@@ -24,7 +26,11 @@ function requiredKeys(schema: z.ZodType): string[] {
 }
 
 describe('handled events match the pinned contract (events.schema.json)', () => {
-  const handled = { room: roomEventSchemas, user: userEventSchemas } as const
+  const handled = {
+    room: roomEventSchemas,
+    channel: channelEventSchemas,
+    user: userEventSchemas,
+  } as const
 
   for (const [topic, schemas] of Object.entries(handled)) {
     for (const [event, schema] of Object.entries(schemas)) {
@@ -53,8 +59,32 @@ describe('handled events match the pinned contract (events.schema.json)', () => 
     }
   })
 
-  it('both topics are private', () => {
+  it('the Message inside message:created / message:updated matches $defs.Message and ProfileSummary', () => {
+    const defs = contract.$defs as Record<string, EventDefinition>
+    const messageDefinition = defs.Message!
+    const profileDefinition = defs.ProfileSummary!
+    expect(messageDefinition.properties?.author).toEqual({
+      anyOf: [{ $ref: '#/$defs/ProfileSummary' }, { type: 'null' }],
+    })
+    for (const event of ['message:created', 'message:updated'] as const) {
+      expect(serverEvents.channel?.[event]?.properties?.message).toEqual({ $ref: '#/$defs/Message' })
+      const message = (channelEventSchemas[event] as z.ZodObject).shape.message as z.ZodObject
+      expect(requiredKeys(message)).toEqual([...(messageDefinition.required ?? [])].sort())
+      for (const key of Object.keys(message.shape)) {
+        expect(messageDefinition.properties ?? {}).toHaveProperty(key)
+      }
+      // author is ProfileSummary | null: check the object inside the nullable.
+      const author = (message.shape.author as z.ZodNullable<z.ZodObject>).unwrap()
+      expect(requiredKeys(author)).toEqual([...(profileDefinition.required ?? [])].sort())
+      for (const key of Object.keys(author.shape)) {
+        expect(profileDefinition.properties ?? {}).toHaveProperty(key)
+      }
+    }
+  })
+
+  it('the topics we join are private', () => {
     expect(contract.topics.room.private).toBe(true)
+    expect(contract.topics.channel.private).toBe(true)
     expect(contract.topics.user.private).toBe(true)
   })
 })
@@ -152,7 +182,64 @@ describe('parseUserEvent', () => {
   })
 })
 
+describe('parseChannelEvent', () => {
+  const CHANNEL_ID = '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f'
+  const message = {
+    id: 'f0000000-0000-4000-8000-000000000001',
+    channelId: CHANNEL_ID,
+    author: { id: ROOM_ID, displayName: 'Maya', avatarUrl: 'https://avatars.test/maya.jpg' },
+    body: 'gg, one more?',
+    createdAt: '2026-09-01T10:00:00.000Z',
+    editedAt: null,
+  }
+
+  it('parses message:created, message:updated and message:deleted', () => {
+    expect(parseChannelEvent('message:created', { message })).toEqual({
+      event: 'message:created',
+      data: { message },
+    })
+    const edited = { ...message, body: 'gg', editedAt: '2026-09-01T10:01:00.000Z' }
+    expect(parseChannelEvent('message:updated', { message: edited })?.data).toEqual({ message: edited })
+    expect(
+      parseChannelEvent('message:deleted', { id: message.id, channelId: CHANNEL_ID }),
+    ).toEqual({ event: 'message:deleted', data: { id: message.id, channelId: CHANNEL_ID } })
+  })
+
+  it('accepts a deleted author (null) and a missing avatar', () => {
+    expect(parseChannelEvent('message:created', { message: { ...message, author: null } })).not.toBeNull()
+    const noAvatar = { ...message, author: { ...message.author, avatarUrl: null } }
+    expect(parseChannelEvent('message:created', { message: noAvatar })).not.toBeNull()
+  })
+
+  it('bounds the body at 2000 code points, counting an emoji once, and rejects longer', () => {
+    const emoji = String.fromCodePoint(0x1f3ae)
+    expect(emoji).toHaveLength(2)
+    const body = (text: string) => parseChannelEvent('message:created', { message: { ...message, body: text } })
+    expect(body(emoji.repeat(2000))).not.toBeNull()
+    expect(body(emoji.repeat(2001))).toBeNull()
+    expect(body('a'.repeat(2000))).not.toBeNull()
+    expect(body('a'.repeat(2001))).toBeNull()
+  })
+
+  it('drops invalid payloads and events it does not handle', () => {
+    expect(parseChannelEvent('message:created', { message: { ...message, id: 'nope' } })).toBeNull()
+    expect(parseChannelEvent('message:created', { message: { ...message, body: 42 } })).toBeNull()
+    expect(parseChannelEvent('message:created', { message: { ...message, createdAt: 'yesterday' } })).toBeNull()
+    expect(parseChannelEvent('message:created', { message: { ...message, editedAt: undefined } })).toBeNull()
+    expect(
+      parseChannelEvent('message:created', {
+        message: { ...message, author: { ...message.author, avatarUrl: 'javascript:alert(1)' } },
+      }),
+    ).toBeNull()
+    expect(parseChannelEvent('message:updated', {})).toBeNull()
+    expect(parseChannelEvent('message:deleted', { id: message.id })).toBeNull()
+    expect(parseChannelEvent('typing:started', { userId: ROOM_ID })).toBeNull()
+    expect(parseChannelEvent('hasOwnProperty', {})).toBeNull()
+  })
+})
+
 it('builds lowercase topic names', () => {
   expect(realtimeTopics.room('0B7A3C1E-2F4D-4E5A-8B6C-7D8E9F0A1B2C')).toBe(`room:${ROOM_ID}`)
+  expect(realtimeTopics.channel('0B7A3C1E-2F4D-4E5A-8B6C-7D8E9F0A1B2C')).toBe(`channel:${ROOM_ID}`)
   expect(realtimeTopics.user('ABC')).toBe('user:abc')
 })

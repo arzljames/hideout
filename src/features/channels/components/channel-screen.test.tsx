@@ -12,10 +12,9 @@ describe('TextChannelView', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'clips' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'No messages yet' })).toBeInTheDocument()
     expect(
-      screen.getByText("Only members of Night Owls can see what's posted in #clips."),
-    ).toBeInTheDocument()
+      screen.getByText(/^Only members of/),
+    ).toHaveTextContent("Only members of Night Owls can see what's posted in #clips.")
     expect(screen.queryByRole('log')).not.toBeInTheDocument()
-    expect(screen.queryByText(/is typing/)).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Message #clips' })).toBeInTheDocument()
   })
 })

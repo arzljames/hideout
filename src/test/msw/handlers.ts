@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import { meFixture } from '../fixtures/me'
 import { testRealtimeToken } from '../fixtures/realtime-token'
+import { messageHandlers } from './messages'
 import { roomHandlers } from './rooms'
 
 /** Default handlers shared by all tests. Override per test with `server.use(...)`. */
@@ -16,4 +17,7 @@ export const handlers: RequestHandler[] = [
   ),
   // The fixture rooms (src/test/fixtures/rooms.ts); unknown room ids get 404.
   ...roomHandlers,
+  // Empty text channels; sends, edits and deletes succeed without changing them. For history
+  // or stateful writes, `server.use(...messageHandlers({ [channelId]: messages }))`.
+  ...messageHandlers({}, { persist: false }),
 ]

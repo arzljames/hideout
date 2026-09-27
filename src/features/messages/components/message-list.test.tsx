@@ -1,33 +1,21 @@
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { failOnConsoleError } from '@/test/console-guard'
-import { TooltipProvider } from '@/components/ui/tooltip'
-import { renderWithProviders } from '@/test/render'
-import { getSampleMessages, getSampleTyping, sampleViewerId } from '../sample-messages'
-import { Composer } from './composer'
-import { MessageList } from './message-list'
-import { TypingIndicator } from './typing-indicator'
+import { generalMessages } from '@/test/fixtures/messages'
+import { channelOf, nightOwls, roomPath } from '@/test/fixtures/rooms'
+import { messageHandlers } from '@/test/msw/messages'
+import { server } from '@/test/msw/server'
+import { renderRoute } from '@/test/render'
 
 failOnConsoleError()
 
-// Rooms don't render messages until the messages API is wired, so the list is tested on its
-// own with the design sample messages, followed by the composer as in a text channel.
+// #general in Night Owls with the fixture history, followed by the composer.
 async function renderGeneral() {
+  server.use(...messageHandlers({ [channelOf(nightOwls, 'general').id]: generalMessages }))
   const user = userEvent.setup()
-  renderWithProviders(
-    <TooltipProvider>
-      <div className="flex h-svh flex-col">
-        <MessageList
-          channelName="general"
-          messages={getSampleMessages('night-owls', 'general')}
-          viewerId={sampleViewerId}
-        />
-        <TypingIndicator names={getSampleTyping('night-owls', 'general')} />
-        <Composer channelName="general" />
-      </div>
-    </TooltipProvider>,
-  )
-  const log = screen.getByRole('log', { name: 'Messages in #general' })
+  await renderRoute(roomPath(nightOwls, 'general'))
+  const log = await screen.findByRole('log', { name: 'Messages in #general' })
+  await within(log).findByText('Same, joining now')
   return { user, log }
 }
 
@@ -38,6 +26,9 @@ function messageRow(log: HTMLElement, text: string) {
   return row
 }
 
+/** Exact text outside screen-reader-only text (the visible author headers). */
+const visibleHeader = { exact: true, ignore: '.sr-only, .sr-only *' }
+
 /** Rows that are currently in the tab order. */
 function tabStops(log: HTMLElement) {
   return within(log)
@@ -46,29 +37,30 @@ function tabStops(log: HTMLElement) {
 }
 
 describe('MessageList in #general', () => {
-  it('is a polite live log labelled with the channel', async () => {
+  it('is a labelled log that does not announce loaded history itself', async () => {
     const { log } = await renderGeneral()
 
-    expect(log).toHaveAttribute('aria-live', 'polite')
+    expect(log).toHaveAttribute('aria-live', 'off')
   })
 
-  it('starts the day with a "Today" divider', async () => {
+  it('starts with "This is the start of #general" and a "Today" divider', async () => {
     const { log } = await renderGeneral()
 
+    expect(within(log).getByText(/This is the start of #/)).toHaveTextContent(
+      'This is the start of #general',
+    )
     expect(within(log).getByRole('separator', { name: 'Today' })).toBeInTheDocument()
   })
 
   it("groups Maya's two consecutive messages under one author header", async () => {
     const { log } = await renderGeneral()
 
-    // One visible "Maya" header for both lines.
-    expect(within(log).getAllByText('Maya', { exact: true })).toHaveLength(1)
+    expect(within(log).getAllByText('Maya', visibleHeader)).toHaveLength(1)
     const first = messageRow(log, 'Anyone up for a couple of runs after dinner?')
     const second = messageRow(log, 'I still need the bell bearing from the catacombs.')
     expect(within(first).getByText('Maya', { exact: true })).toBeInTheDocument()
-    expect(within(first).getByText('Maya', { exact: true }).closest('p')?.querySelector('time')).not.toBeNull()
     // The continuation line has no visible header but still names the author for screen readers.
-    expect(within(second).queryByText('Maya', { exact: true })).not.toBeInTheDocument()
+    expect(within(second).queryByText('Maya', visibleHeader)).not.toBeInTheDocument()
     expect(second).toHaveTextContent(/^Maya, .+:I still need the bell bearing/)
   })
 
@@ -76,18 +68,18 @@ describe('MessageList in #general', () => {
     const { log } = await renderGeneral()
 
     for (const name of ['Maya', 'Alex', 'Jun', 'Arzl']) {
-      expect(within(log).getAllByText(name, { exact: true })).toHaveLength(1)
+      expect(within(log).getAllByText(name, visibleHeader)).toHaveLength(1)
     }
   })
 
-  it("marks Arzl's message as (edited)", async () => {
+  it('marks an edited message as (edited)', async () => {
     const { log } = await renderGeneral()
 
     expect(within(log).getAllByText('(edited)')).toHaveLength(1)
     expect(messageRow(log, 'Same, joining now')).toContainElement(within(log).getByText('(edited)'))
   })
 
-  it('renders the Steam URL as a safe external link and keeps the text around it', async () => {
+  it('renders a URL as a safe external link and keeps the text around it', async () => {
     const { log } = await renderGeneral()
 
     const url = 'https://steamcommunity.com/sharedfiles/filedetails/?id=2951'
@@ -96,19 +88,16 @@ describe('MessageList in #general', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow')
     expect(link).toHaveAttribute('target', '_blank')
     expect(messageRow(log, 'This is the route I was talking about:')).toContainElement(link)
-    expect(within(log).getAllByRole('link')).toHaveLength(1)
   })
 
-  it('shows Edit and Delete only on your own message', async () => {
+  it('shows Edit only on your own message, and Delete on every message for an owner', async () => {
     const { log } = await renderGeneral()
 
     const edits = within(log).getAllByRole('button', { name: 'Edit message' })
-    const deletes = within(log).getAllByRole('button', { name: 'Delete message' })
     expect(edits).toHaveLength(1)
-    expect(deletes).toHaveLength(1)
-    const own = messageRow(log, 'Same, joining now')
-    expect(own).toContainElement(edits[0] ?? null)
-    expect(own).toContainElement(deletes[0] ?? null)
+    expect(messageRow(log, 'Same, joining now')).toContainElement(edits[0] ?? null)
+    // Night Owls is yours: you can delete anyone's message.
+    expect(within(log).getAllByRole('button', { name: 'Delete message' })).toHaveLength(6)
   })
 
   it('opens Edit and Delete in a context menu when you right-click your own message', async () => {
@@ -126,19 +115,10 @@ describe('MessageList in #general', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  it("does not open a context menu on someone else's message", async () => {
-    const { user, log } = await renderGeneral()
-
-    await user.pointer({ keys: '[MouseRight]', target: messageRow(log, 'In. Give me 20 minutes.') })
-
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
-  })
-
   it('names each message by author and time', async () => {
     const { log } = await renderGeneral()
 
     const rows = within(log).getAllByRole('article')
-    expect(rows).toHaveLength(6)
     expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual([
       expect.stringMatching(/^Maya, \d{1,2}:41/),
       expect.stringMatching(/^Maya, \d{1,2}:41/),
@@ -153,7 +133,6 @@ describe('MessageList in #general', () => {
     const { log } = await renderGeneral()
 
     expect(tabStops(log)).toEqual([messageRow(log, 'Same, joining now')])
-    // The own-message toolbar is reached with arrow keys, not Tab.
     for (const button of within(log).getAllByRole('button')) {
       expect(button).toHaveAttribute('tabindex', '-1')
     }
@@ -161,8 +140,7 @@ describe('MessageList in #general', () => {
 
   it('moves between messages with ArrowUp/ArrowDown and jumps with Home/End', async () => {
     const { user, log } = await renderGeneral()
-    const newest = messageRow(log, 'Same, joining now')
-    act(() => newest.focus())
+    act(() => messageRow(log, 'Same, joining now').focus())
 
     await user.keyboard('{ArrowUp}')
     const jun = messageRow(log, 'Just wrapped a deep dive.')
@@ -179,7 +157,7 @@ describe('MessageList in #general', () => {
     expect(messageRow(log, 'I still need the bell bearing from the catacombs.')).toHaveFocus()
 
     await user.keyboard('{End}')
-    expect(newest).toHaveFocus()
+    expect(messageRow(log, 'Same, joining now')).toHaveFocus()
   })
 
   it('leaves the log for the composer with a single Tab', async () => {
@@ -208,21 +186,13 @@ describe('MessageList in #general', () => {
     expect(own).toHaveFocus()
   })
 
-  it("does nothing on ArrowRight on someone else's message", async () => {
+  it('sends a message: it shows as sending, then as a message', async () => {
     const { user, log } = await renderGeneral()
-    const alex = messageRow(log, 'In. Give me 20 minutes.')
-    act(() => alex.focus())
 
-    await user.keyboard('{ArrowRight}')
+    await user.type(screen.getByRole('textbox', { name: 'Message #general' }), 'on my way{Enter}')
 
-    expect(alex).toHaveFocus()
-  })
-
-  it('shows "Alex is typing…" in a live region', async () => {
-    await renderGeneral()
-
-    const typing = screen.getByText(/is typing/)
-    expect(typing).toHaveTextContent('Alex is typing…')
-    expect(typing.closest('[aria-live="polite"]')).not.toBeNull()
+    await within(log).findByText('on my way')
+    await vi.waitFor(() => expect(messageRow(log, 'on my way')).toHaveAccessibleName(/^Arzl, /))
+    expect(screen.queryByText('Sending…')).not.toBeInTheDocument()
   })
 })

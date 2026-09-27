@@ -7,18 +7,22 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { UserAvatar } from '@/components/user-avatar'
 import { cn } from '@/lib/utils'
-import { formatMessageTime } from '../lib/format-time'
+import { authorName } from '../lib/author-name'
+import { formatMessageDateTime, formatMessageTime } from '../lib/format-time'
 import { linkify } from '../lib/linkify'
-import type { ChatMessage } from '../sample-messages'
+import type { EditingState } from '../pending-messages-store'
+import type { Message } from '../types'
 import { MessageActions } from './message-actions'
+import { MessageEditor } from './message-editor'
 
 const messageRowVariants = cva(
   'group/message relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 px-4 py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset',
   {
     variants: {
-      own: {
+      actionable: {
         true: 'hover:bg-muted/40 focus-within:bg-muted/40 data-[state=open]:bg-muted/40',
         false: '',
       },
@@ -31,38 +35,53 @@ const messageRowVariants = cva(
 )
 
 interface MessageRowProps {
-  message: ChatMessage
+  message: Message
   /** First message of a group: shows the avatar, author and time. */
   isFirst: boolean
-  /** Your own message: adds the edit/delete toolbar and context menu. */
-  isOwn: boolean
+  canEdit: boolean
+  canDelete: boolean
   /** Roving tabindex: only the active row in the log is a tab stop. */
   isTabStop: boolean
+  /** The inline editor's state when this message is being edited. */
+  editing: EditingState | undefined
   /** Called when the row (or its toolbar) receives focus, to make it the active row. */
   onFocusRow: (messageId: string) => void
+  onEdit: (message: Message) => void
+  onDelete: (message: Message) => void
+  onSaveEdit: (message: Message, body: string) => void
+  onCancelEdit: (message: Message) => void
   className?: string
 }
 
 /**
  * One message, as an article in the message log. The log is a single tab stop: arrow keys move
- * between rows (see MessageList), and on your own message ArrowRight enters its action toolbar.
+ * between rows (see MessageList); on a message you can edit or delete, ArrowRight enters its
+ * action toolbar. Bodies are bidi-isolated and rendered as text (links via `linkify`).
  */
 export function MessageRow({
   message,
   isFirst,
-  isOwn,
+  canEdit,
+  canDelete,
   isTabStop,
+  editing,
   onFocusRow,
+  onEdit,
+  onDelete,
+  onSaveEdit,
+  onCancelEdit,
   className,
 }: MessageRowProps) {
-  const time = formatMessageTime(message.sentAt)
+  const time = formatMessageTime(message.createdAt)
+  const name = authorName(message)
   const hintId = useId()
   const rowRef = useRef<HTMLDivElement>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const actionable = (canEdit || canDelete) && !editing
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.target !== event.currentTarget) return
-    if (isOwn && event.key === 'ArrowRight') {
+    if (actionable && event.key === 'ArrowRight') {
       event.preventDefault()
       toolbarRef.current?.querySelector('button')?.focus()
     }
@@ -72,44 +91,80 @@ export function MessageRow({
     <div
       ref={rowRef}
       role="article"
-      aria-label={`${message.author.name}, ${time}`}
-      aria-describedby={isOwn ? hintId : undefined}
+      aria-label={`${name}, ${time}`}
+      aria-describedby={actionable ? hintId : undefined}
       data-message-row=""
+      data-message-id={message.id.toLowerCase()}
       tabIndex={isTabStop ? 0 : -1}
       onFocus={() => onFocusRow(message.id)}
       onKeyDown={handleKeyDown}
-      className={cn(messageRowVariants({ own: isOwn, first: isFirst }), className)}
+      className={cn(messageRowVariants({ actionable, first: isFirst }), className)}
     >
       <div className="row-span-2">
-        {isFirst && <UserAvatar name={message.author.name} tone={message.author.tone} />}
+        {isFirst && (
+          <UserAvatar
+            name={name}
+            src={message.author?.avatarUrl}
+            initials={message.author ? undefined : '?'}
+          />
+        )}
       </div>
 
       {isFirst ? (
-        <p className="flex items-baseline gap-2">
-          <span className="text-sm font-semibold">{message.author.name}</span>
-          <time dateTime={message.sentAt} className="text-xs text-muted-foreground">
+        <p className="flex min-w-0 items-baseline gap-2">
+          <bdi
+            className={cn(
+              'truncate text-sm font-semibold',
+              !message.author && 'text-muted-foreground',
+            )}
+          >
+            {name}
+          </bdi>
+          <time dateTime={message.createdAt} className="shrink-0 text-xs text-muted-foreground">
             {time}
           </time>
         </p>
       ) : (
         <span className="sr-only">
-          {message.author.name}, {time}:
+          <bdi>{name}</bdi>, {time}:
         </span>
       )}
 
-      <p className="text-sm leading-relaxed wrap-break-word whitespace-pre-wrap">
-        {/* Links join the tab order only in the row that holds the log's tab stop. */}
-        {linkify(message.text, { tabIndex: isTabStop ? undefined : -1 })}
-        {message.edited && <span className="ml-1 text-xs text-muted-foreground">(edited)</span>}
-      </p>
+      {editing ? (
+        <MessageEditor
+          initialText={editing.text ?? message.body}
+          initialError={editing.error}
+          onSave={(body) => onSaveEdit(message, body)}
+          onCancel={() => onCancelEdit(message)}
+        />
+      ) : (
+        <p className="text-sm leading-relaxed">
+          <bdi dir="auto" className="wrap-break-word whitespace-pre-wrap">
+            {/* Links join the tab order only in the row that holds the log's tab stop. */}
+            {linkify(message.body, { tabIndex: isTabStop ? undefined : -1 })}
+          </bdi>
+          {message.editedAt && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="ml-1 text-xs text-muted-foreground">(edited)</span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                Edited <time dateTime={message.editedAt}>{formatMessageDateTime(message.editedAt)}</time>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </p>
+      )}
 
-      {isOwn && (
+      {actionable && (
         <>
           <span id={hintId} className="sr-only">
             Press Right Arrow for message actions.
           </span>
           <MessageActions
             ref={toolbarRef}
+            onEdit={canEdit ? () => onEdit(message) : undefined}
+            onDelete={canDelete ? () => onDelete(message) : undefined}
             onExit={() => rowRef.current?.focus()}
             className="absolute -top-3 right-4 opacity-0 group-hover/message:opacity-100 group-focus-within/message:opacity-100"
           />
@@ -118,22 +173,24 @@ export function MessageRow({
     </div>
   )
 
-  if (!isOwn) return row
+  if (!actionable) return row
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
       <ContextMenuContent>
-        {/* TODO(api): edit message inline. */}
-        <ContextMenuItem>
-          <Pencil aria-hidden="true" />
-          Edit message
-        </ContextMenuItem>
-        {/* TODO(api): confirm with an AlertDialog, then delete via the API. */}
-        <ContextMenuItem variant="destructive">
-          <Trash2 aria-hidden="true" />
-          Delete message
-        </ContextMenuItem>
+        {canEdit && (
+          <ContextMenuItem onSelect={() => onEdit(message)}>
+            <Pencil aria-hidden="true" />
+            Edit message
+          </ContextMenuItem>
+        )}
+        {canDelete && (
+          <ContextMenuItem variant="destructive" onSelect={() => onDelete(message)}>
+            <Trash2 aria-hidden="true" />
+            Delete message
+          </ContextMenuItem>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   )

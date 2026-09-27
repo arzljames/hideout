@@ -3,6 +3,8 @@ import './polyfills'
 import { cleanup } from '@testing-library/react'
 import { toast } from 'sonner'
 import { resetPendingInvitesStore } from '@/features/invites/pending-invites-store'
+import { resetMessageSender } from '@/features/messages/message-sender'
+import { resetPendingMessagesStore } from '@/features/messages/pending-messages-store'
 import { resetMemberPanelStore } from '@/features/rooms/member-panel-store'
 import { resetVoiceStore } from '@/features/voice/voice-store'
 import { setUnauthenticatedHandler } from '@/lib/api/client'
@@ -36,6 +38,8 @@ afterEach(() => {
   setUnauthenticatedHandler(undefined)
   setRealtimeSignedOutHandler(undefined)
   resetPendingInvitesStore()
+  resetMessageSender()
+  resetPendingMessagesStore()
   // Realtime is a module singleton too (token manager, topics, the fake client's channels).
   stopRealtime()
   fakeSupabase.reset()

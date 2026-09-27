@@ -11,8 +11,12 @@ export const STUCK_RECHECK_CAP_MS = 60_000
 export const STUCK_AFTER_FAILURES = 5
 
 export type TopicStatus =
-  /** Joined. `afterError`: rejoined after a failure, so broadcasts may have been missed. */
-  | { type: 'subscribed'; afterError: boolean }
+  /**
+   * Joined. `afterError`: rejoined after a failure, so broadcasts may have been missed.
+   * `downForMs`: with `afterError`, how long since the topic last left SUBSCRIBED (or, if it
+   * never joined, since it started joining); 0 otherwise.
+   */
+  | { type: 'subscribed'; afterError: boolean; downForMs: number }
   /** Not joined for a while (see STUCK_*). supabase-js keeps retrying. */
   | { type: 'stuck' }
 
@@ -28,6 +32,8 @@ interface Entry {
   channel: RealtimeChannel | null
   subscribed: boolean
   hadError: boolean
+  /** When the topic last left SUBSCRIBED (or started joining); undefined while subscribed. */
+  downSince: number | undefined
   failures: number
   stuckTimer: ReturnType<typeof setTimeout> | undefined
   stuckDelay: number
@@ -75,6 +81,7 @@ function fireStuck(entry: Entry) {
 
 function recordFailure(entry: Entry) {
   entry.subscribed = false
+  entry.downSince ??= Date.now()
   entry.hadError = true
   entry.failures += 1
   if (entry.failures === STUCK_AFTER_FAILURES) fireStuck(entry)
@@ -89,14 +96,16 @@ function onChannelStatus(entry: Entry, channel: RealtimeChannel, status: string,
   switch (status) {
     case 'SUBSCRIBED': {
       const afterError = entry.hadError
+      const downForMs = afterError ? Math.max(0, Date.now() - (entry.downSince ?? Date.now())) : 0
       entry.subscribed = true
       entry.hadError = false
+      entry.downSince = undefined
       entry.failures = 0
       entry.recreateAttempts = 0
       entry.stuckDelay = STUCK_AFTER_MS
       clearTimeout(entry.stuckTimer)
       entry.stuckTimer = undefined
-      emit(entry, { type: 'subscribed', afterError })
+      emit(entry, { type: 'subscribed', afterError, downForMs })
       return
     }
     case 'CHANNEL_ERROR':
@@ -208,6 +217,7 @@ export function subscribeTopic(topic: string, listener: TopicListener): () => vo
       channel: null,
       subscribed: false,
       hadError: false,
+      downSince: Date.now(),
       failures: 0,
       stuckTimer: undefined,
       stuckDelay: STUCK_AFTER_MS,
@@ -220,7 +230,7 @@ export function subscribeTopic(topic: string, listener: TopicListener): () => vo
   }
   entry.releasing = false
   entry.listeners.add(listener)
-  if (entry.subscribed) listener.onStatus?.({ type: 'subscribed', afterError: false })
+  if (entry.subscribed) listener.onStatus?.({ type: 'subscribed', afterError: false, downForMs: 0 })
 
   const owned = entry
   return () => {
