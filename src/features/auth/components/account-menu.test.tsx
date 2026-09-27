@@ -2,8 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { http, HttpResponse } from 'msw'
-import { useVoiceStore } from '@/features/voice'
-import { useVoiceSession } from '@/stores/voice-session'
+import { useVoiceSession } from '@/features/voice'
 import { getRealtimeAccessToken } from '@/lib/realtime/access-token'
 import { getRealtimeStatus } from '@/lib/realtime/connection'
 import { failOnConsoleError } from '@/test/console-guard'
@@ -96,8 +95,8 @@ describe('AccountMenu', () => {
       const { user, menu, queryClient } = await openAccountMenu()
       queryClient.setQueryData(['rooms'], [{ id: 'night-owls' }])
       act(() => {
-        useVoiceStore.getState().toggleMute()
-        useVoiceSession.getState().join('night-owls', 'voice-token')
+        useVoiceSession.getState().toggleMute()
+        useVoiceSession.setState({ status: 'connected', roomId: 'night-owls', channelId: 'voice' })
       })
 
       await user.click(within(menu).getByRole('menuitem', { name: 'Sign out' }))
@@ -105,8 +104,8 @@ describe('AccountMenu', () => {
       expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
       await waitFor(() => expect(queryClient.getQueryData(['rooms'])).toBeUndefined())
       expect(queryClient.getQueryData(['auth', 'me'])).toBeNull()
-      expect(useVoiceStore.getState().muted).toBe(false)
-      expect(useVoiceSession.getState()).toMatchObject({ status: 'idle', token: null })
+      expect(useVoiceSession.getState().muted).toBe(false)
+      expect(useVoiceSession.getState()).toMatchObject({ status: 'idle', channelId: null })
     })
 
     it('stops Realtime: leaves every topic, disconnects, and forgets the token', async () => {

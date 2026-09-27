@@ -1,3 +1,4 @@
+import { cva } from 'class-variance-authority'
 import {
   HeadphoneOff,
   Headphones,
@@ -6,30 +7,59 @@ import {
   PhoneOff,
   Settings2,
   Signal,
+  Volume2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Kbd } from '@/components/ui/kbd'
 import { Toggle } from '@/components/ui/toggle'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { useVoiceStore } from '../voice-store'
+import { keyLabel } from '../voice-prefs'
+import { ACTIVE_STATUSES, useVoiceSession, type VoiceStatus } from '../voice-session'
 import { VoiceSettingsDialog } from './voice-settings-dialog'
+
+const statusVariants = cva('text-sm font-medium', {
+  variants: {
+    tone: {
+      connected: 'text-primary',
+      pending: 'text-muted-foreground',
+    },
+  },
+})
+
+const STATUS_TEXT: Partial<Record<VoiceStatus, string>> = {
+  'requesting-mic': 'Waiting for your mic…',
+  connecting: 'Connecting…',
+  connected: 'Connected',
+  reconnecting: 'Reconnecting…',
+}
+
+const QUALITY_TEXT = { good: 'Good', poor: 'Poor', lost: 'Lost' } as const
 
 interface VoiceConnectionBarProps {
   className?: string
 }
 
 /**
- * Connection status and voice controls, above the user card. Renders nothing while not
- * connected to a voice channel.
+ * Connection status and voice controls, above the user card. Renders nothing unless joining
+ * or in a voice channel.
  */
 export function VoiceConnectionBar({ className }: VoiceConnectionBarProps) {
-  const connection = useVoiceStore((s) => s.connection)
-  const muted = useVoiceStore((s) => s.muted)
-  const deafened = useVoiceStore((s) => s.deafened)
-  const toggleMute = useVoiceStore((s) => s.toggleMute)
-  const toggleDeafen = useVoiceStore((s) => s.toggleDeafen)
+  const status = useVoiceSession((s) => s.status)
+  const channelName = useVoiceSession((s) => s.channelName)
+  const roomName = useVoiceSession((s) => s.roomName)
+  const quality = useVoiceSession((s) => s.quality)
+  const muted = useVoiceSession((s) => s.muted)
+  const deafened = useVoiceSession((s) => s.deafened)
+  const pushToTalk = useVoiceSession((s) => s.inputMode === 'push-to-talk')
+  const pttKey = useVoiceSession((s) => s.pttKey)
+  const audioBlocked = useVoiceSession((s) => s.audioBlocked)
+  const toggleMute = useVoiceSession((s) => s.toggleMute)
+  const toggleDeafen = useVoiceSession((s) => s.toggleDeafen)
+  const leave = useVoiceSession((s) => s.leave)
+  const startAudio = useVoiceSession((s) => s.startAudio)
 
-  if (!connection) return null
+  if (!ACTIVE_STATUSES.has(status)) return null
 
   return (
     <section
@@ -37,18 +67,41 @@ export function VoiceConnectionBar({ className }: VoiceConnectionBarProps) {
       className={cn('flex flex-col gap-2 border-b border-sidebar-border pb-2', className)}
     >
       <div className="flex items-center gap-2 px-1">
-        <Signal aria-hidden="true" className="size-4 shrink-0 text-primary" />
+        <Signal
+          aria-hidden="true"
+          className={cn(
+            'size-4 shrink-0',
+            status === 'connected' ? 'text-primary' : 'text-muted-foreground',
+          )}
+        />
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="text-sm font-medium text-primary">Connected</p>
+          <p className={statusVariants({ tone: status === 'connected' ? 'connected' : 'pending' })}>
+            {STATUS_TEXT[status]}
+          </p>
           <p className="truncate text-xs text-muted-foreground">
-            {connection.channelName} · {connection.roomName}
+            <bdi>{channelName}</bdi> · <bdi>{roomName}</bdi>
           </p>
         </div>
-        {/* TODO(livekit): map ConnectionQuality to Good / Poor / Lost. */}
-        <span className="text-xs text-muted-foreground">
-          <span className="sr-only">Connection quality: </span>Good
-        </span>
+        {status === 'connected' && quality && (
+          <span className="text-xs text-muted-foreground">
+            <span className="sr-only">Connection quality: </span>
+            {QUALITY_TEXT[quality]}
+          </span>
+        )}
       </div>
+
+      {status === 'connected' && pushToTalk && !muted && (
+        <p className="px-1 text-xs text-muted-foreground">
+          Hold <Kbd>{keyLabel(pttKey)}</Kbd> to talk
+        </p>
+      )}
+
+      {audioBlocked && (
+        <Button type="button" variant="outline" size="sm" onClick={() => void startAudio()}>
+          <Volume2 aria-hidden="true" />
+          Turn on voice audio
+        </Button>
+      )}
 
       <div className="flex items-center gap-1">
         {/* Constant labels + aria-pressed: the pressed state carries "muted" / "deafened". */}
@@ -95,12 +148,12 @@ export function VoiceConnectionBar({ className }: VoiceConnectionBarProps) {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            {/* TODO(livekit): disconnect from the Room and clear the connection. */}
             <Button
               type="button"
               variant="destructive-solid"
               aria-label="Disconnect"
               className="ml-auto flex-1"
+              onClick={() => void leave()}
             >
               <PhoneOff aria-hidden="true" />
             </Button>

@@ -99,6 +99,21 @@ describe('handled events match the pinned contract (events.schema.json)', () => 
     expect([...role.options].sort()).toEqual([...(roleDefinition.enum ?? [])].sort())
   })
 
+  it('the participants in voice:participants are $defs.ProfileSummary', () => {
+    const profileDefinition = (contract.$defs as Record<string, EventDefinition>).ProfileSummary!
+    expect(serverEvents.room?.['voice:participants']?.properties?.participants).toEqual({
+      type: 'array',
+      items: { $ref: '#/$defs/ProfileSummary' },
+    })
+    const participants = (roomEventSchemas['voice:participants'] as unknown as z.ZodObject).shape
+      .participants as z.ZodArray<z.ZodObject>
+    const profile = participants.element
+    expect(requiredKeys(profile)).toEqual([...(profileDefinition.required ?? [])].sort())
+    for (const key of Object.keys(profile.shape)) {
+      expect(profileDefinition.properties ?? {}).toHaveProperty(key)
+    }
+  })
+
   it('the topics we join are private', () => {
     expect(contract.topics.room.private).toBe(true)
     expect(contract.topics.channel.private).toBe(true)
@@ -179,6 +194,36 @@ describe('parseRoomEvent', () => {
     expect(parseRoomEvent('room:deleted', {})).toBeNull()
     expect(parseRoomEvent('member:joined', { member: {} })).toBeNull()
     expect(parseRoomEvent('toString', {})).toBeNull()
+  })
+})
+
+describe('parseRoomEvent: voice:participants', () => {
+  const CHANNEL_ID = '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f'
+  const maya = {
+    id: '2d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f6a',
+    displayName: 'Maya',
+    avatarUrl: 'https://avatars.example/maya.jpg',
+  }
+  const jun = { id: '3e4f5a6b-7c8d-4e9f-8a1b-2c3d4e5f6a7b', displayName: 'Jun', avatarUrl: null }
+
+  it('parses the full list for one channel, in order, and an empty list', () => {
+    expect(parseRoomEvent('voice:participants', { channelId: CHANNEL_ID, participants: [maya, jun] })).toEqual({
+      event: 'voice:participants',
+      data: { channelId: CHANNEL_ID, participants: [maya, jun] },
+    })
+    expect(parseRoomEvent('voice:participants', { channelId: CHANNEL_ID, participants: [] })?.data).toEqual({
+      channelId: CHANNEL_ID,
+      participants: [],
+    })
+  })
+
+  it('drops a malformed list rather than showing part of it', () => {
+    const parse = (payload: unknown) => parseRoomEvent('voice:participants', payload)
+    expect(parse({ channelId: 'voice', participants: [] })).toBeNull()
+    expect(parse({ channelId: CHANNEL_ID })).toBeNull()
+    expect(parse({ channelId: CHANNEL_ID, participants: [maya, { ...jun, id: 'jun' }] })).toBeNull()
+    expect(parse({ channelId: CHANNEL_ID, participants: [{ ...maya, avatarUrl: 'javascript:alert(1)' }] })).toBeNull()
+    expect(parse({ channelId: CHANNEL_ID, participants: [{ id: jun.id, avatarUrl: null }] })).toBeNull()
   })
 })
 

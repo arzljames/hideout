@@ -11,6 +11,7 @@ import {
   RoomSkeleton,
   useRoomEvents,
 } from '@/features/rooms'
+import { useRoomVoiceParticipants } from '@/features/voice'
 
 export const Route = createFileRoute('/_app/rooms/$roomId')({
   beforeLoad: redirectToLowercaseRoomId,
@@ -26,6 +27,7 @@ function RoomRoute() {
   const { roomId } = Route.useParams()
   const { data: room } = useSuspenseQuery(roomQueryOptions(roomId))
   const { paused } = useRoomEvents(roomId)
+  useRoomVoiceParticipants(roomId)
 
   return (
     <RoomLayout

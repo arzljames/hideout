@@ -17,6 +17,8 @@ interface ChannelSidebarRowProps {
    * clears the handle and the … button.
    */
   children: ReactNode
+  /** Under the row, outside the link and its context menu (e.g. who's in a voice channel). */
+  below?: ReactNode
   className?: string
 }
 
@@ -25,10 +27,23 @@ interface ChannelSidebarRowProps {
  * handle and a … menu (both beside the link, never inside it, so a click on the link only
  * navigates) and a context menu on the link.
  */
-export function ChannelSidebarRow({ channel, item, children, className }: ChannelSidebarRowProps) {
+export function ChannelSidebarRow({
+  channel,
+  item,
+  children,
+  below,
+  className,
+}: ChannelSidebarRowProps) {
   const actionsRef = useRef<HTMLButtonElement>(null)
 
-  if (!item) return <SidebarMenuItem className={cn(className)}>{children}</SidebarMenuItem>
+  if (!item) {
+    return (
+      <SidebarMenuItem className={cn(className)}>
+        {children}
+        {below}
+      </SidebarMenuItem>
+    )
+  }
   const { setRowElement, style, isDragging, handleProps, moveUp, moveDown, rename, remove } = item
 
   return (
@@ -58,6 +73,7 @@ export function ChannelSidebarRow({ channel, item, children, className }: Channe
         onMoveUp={moveUp}
         onMoveDown={moveDown}
       />
+      {below}
     </SidebarMenuItem>
   )
 }

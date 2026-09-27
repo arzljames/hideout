@@ -1,8 +1,7 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { useVoiceStore } from '@/features/voice'
+import { useVoiceSession } from '@/features/voice'
 import { api } from '@/lib/api/client'
-import { useVoiceSession } from '@/stores/voice-session'
 import { failOnConsoleError } from '@/test/console-guard'
 import { server } from '@/test/msw/server'
 import { renderRoute } from '@/test/render'
@@ -159,8 +158,8 @@ describe('session ending inside the app', () => {
     // Signed-in state that must not survive the session.
     queryClient.setQueryData(['rooms'], [{ id: 'night-owls' }])
     act(() => {
-      useVoiceStore.getState().toggleMute()
-      useVoiceSession.getState().join('night-owls', 'voice-token')
+      useVoiceSession.getState().toggleMute()
+      useVoiceSession.setState({ status: 'connected', roomId: 'night-owls', channelId: 'voice' })
     })
 
     signedOut()
@@ -181,8 +180,8 @@ describe('session ending inside the app', () => {
     expect(router.state.location.pathname).toBe('/sign-in')
     await waitFor(() => expect(queryClient.getQueryData(['rooms'])).toBeUndefined())
     expect(queryClient.getQueryData(meQueryOptions.queryKey)).toBeNull()
-    expect(useVoiceStore.getState().muted).toBe(false)
-    expect(useVoiceSession.getState()).toMatchObject({ status: 'idle', token: null })
+    expect(useVoiceSession.getState().muted).toBe(false)
+    expect(useVoiceSession.getState()).toMatchObject({ status: 'idle', channelId: null })
   })
 
   it('goes to /sign-in when a background session refetch finds the user signed out', async () => {

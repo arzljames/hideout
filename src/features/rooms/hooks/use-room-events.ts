@@ -2,6 +2,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { meQueryOptions } from '@/features/auth'
+import { replaceChannelParticipants, voiceParticipantsQueryOptions } from '@/features/voice'
 import { useRealtimeReady } from '@/hooks/use-realtime-ready'
 import { useRealtimeTopic } from '@/hooks/use-realtime-topic'
 import { isolate } from '@/lib/bidi'
@@ -81,6 +82,9 @@ export interface RoomEventsState {
  *   `myRole` follows (so owner/admin controls appear or disappear).
  * - `channel:deleted` leaves the channel (and its voice session) if open, forgets it, and toasts
  *   when it was on screen. A delete this tab has in flight is left to its mutation.
+ * - `voice:participants` replaces one voice channel's participant list; channels that aren't
+ *   one of the room's voice channels are ignored. The list is loaded when the room opens
+ *   (useRoomVoiceParticipants) and refetched after rejoining, since broadcasts are best-effort.
  * - Events naming another room are ignored.
  * - After rejoining (broadcasts sent meanwhile are lost), refetch the room.
  * - When the topic is stuck (no SUBSCRIBED for ~30 s or 5 attempts), or Realtime has no token
@@ -236,13 +240,30 @@ export function useRoomEvents(roomId: string): RoomEventsState {
             queryClient.getQueryData(meQueryOptions.queryKey)?.id,
           )
           return
+        case 'voice:participants': {
+          const { channelId, participants } = parsed.data
+          const isVoiceChannel = getCachedChannels(queryClient, roomId)?.some(
+            (channel) => channel.type === 'voice' && sameRoomId(channel.id, channelId),
+          )
+          if (!isVoiceChannel) return
+          replaceChannelParticipants(queryClient, roomId, channelId, participants)
+          return
+        }
       }
     },
     onStatus: (status: TopicStatus) => {
       if (status.type === 'subscribed') {
         subscribed.current = true
         setPaused(false)
-        if (status.afterError) void recheckRoom({ pauseIfAvailable: false })
+        if (status.afterError) {
+          void recheckRoom({ pauseIfAvailable: false })
+          // voice:participants sent while rejoining are lost too. Fetch directly: its readers
+          // are passive (enabled: false), and invalidate/refetch skips queries whose observers
+          // are all disabled, so it would never refetch while the sidebar shows the lists.
+          void queryClient
+            .fetchQuery({ ...voiceParticipantsQueryOptions(roomId), staleTime: 0 })
+            .catch(() => {})
+        }
         return
       }
       subscribed.current = false

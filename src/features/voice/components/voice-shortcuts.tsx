@@ -30,8 +30,8 @@ interface VoiceShortcutsProps {
 
 /** Mute/deafen shortcut hints, with ⌘ on Apple platforms. */
 export function VoiceShortcuts({ className }: VoiceShortcutsProps) {
-  // TODO(voice): bind these; check for clashes with browser shortcuts (Firefox Ctrl+Shift+M,
-  // Chrome Ctrl+Shift+D) and use ⌘ on macOS.
+  // Bound by useVoiceShortcuts while in voice. They override the browser's own Ctrl+Shift+M
+  // (Firefox responsive design mode) and Ctrl+Shift+D (Chrome bookmark all tabs) only then.
   const mac = isApplePlatform()
 
   return (

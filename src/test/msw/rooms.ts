@@ -3,6 +3,7 @@ import type {
   Channel,
   CreateChannelBody,
   CreateRoomBody,
+  ProfileSummary,
   RenameChannelBody,
   ReorderChannelsBody,
   RoomDetail,
@@ -142,9 +143,29 @@ export function channelHandlers(rooms: RoomDetail[] = roomFixtures): RequestHand
 }
 
 /** Default room endpoints, backed by the fixtures (writes don't change them). */
+/**
+ * `GET /api/rooms/:roomId/voice/participants`: every voice channel of the fixture room, with
+ * `byChannel[channelId]` people in it (nobody by default); 404 for any other room.
+ */
+export function voiceParticipantsHandler(
+  byChannel: Record<string, ProfileSummary[]> = {},
+  rooms: RoomDetail[] = roomFixtures,
+): RequestHandler {
+  return http.get('*/api/rooms/:roomId/voice/participants', ({ params }) => {
+    const detail = rooms.find((item) => item.room.id === params.roomId)
+    if (!detail) return roomNotFound()
+    return HttpResponse.json({
+      data: detail.channels
+        .filter((channel) => channel.type === 'voice')
+        .map((channel) => ({ channelId: channel.id, participants: byChannel[channel.id] ?? [] })),
+    })
+  })
+}
+
 export const roomHandlers: RequestHandler[] = [
   roomsListHandler(),
   roomDetailHandler(),
+  voiceParticipantsHandler(),
   ...channelHandlers(),
   http.post('*/api/rooms', async ({ request }) => {
     const body = (await request.json()) as CreateRoomBody

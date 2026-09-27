@@ -70,6 +70,12 @@ const memberSchema: z.ZodType<Schemas['Member']> = z.object({
   currentGame: z.string().nullable(),
 })
 
+// Same shape as VoiceChannelParticipants in the OpenAPI contract (GET .../voice/participants).
+const voiceChannelParticipantsSchema: z.ZodType<Schemas['VoiceChannelParticipants']> = z.object({
+  channelId: id,
+  participants: z.array(profileSummarySchema),
+})
+
 /** Events on `room:<roomId>` that this app handles. */
 export const roomEventSchemas = {
   'room:updated': z.object({ room: roomSchema }),
@@ -87,6 +93,8 @@ export const roomEventSchemas = {
   'member:left': z.object({ roomId: id, userId: id }),
   // `role` is any contract Role: a transfer sends two (old owner → admin, new owner → owner).
   'member:role_changed': z.object({ roomId: id, userId: id, role: roleSchema }),
+  // The full list for one voice channel, in join order: replace, don't merge. Best-effort.
+  'voice:participants': voiceChannelParticipantsSchema,
 }
 
 // A message body is at most 2000 Unicode code points (MessageBody in the contract). Counted

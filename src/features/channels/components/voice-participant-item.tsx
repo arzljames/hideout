@@ -1,8 +1,8 @@
 import { HeadphoneOff, MicOff } from 'lucide-react'
 import { SidebarMenuSubItem } from '@/components/ui/sidebar'
 import { UserAvatar } from '@/components/user-avatar'
+import type { ProfileSummary } from '@/features/rooms'
 import { cn } from '@/lib/utils'
-import type { ProfileSummary } from '../types'
 
 interface VoiceParticipantItemProps {
   user: ProfileSummary
@@ -13,8 +13,8 @@ interface VoiceParticipantItemProps {
 }
 
 /**
- * Someone in a voice channel, listed under the channel in the channel panel. Not rendered yet:
- * TODO(livekit): VoiceChannelItem lists participants from the voice session.
+ * Someone in a voice channel, listed under the channel in the channel panel. Mute and deafen
+ * are only known (and shown) for yourself.
  */
 export function VoiceParticipantItem({
   user,
@@ -33,12 +33,12 @@ export function VoiceParticipantItem({
       {deafened ? (
         <span className="flex shrink-0 text-muted-foreground">
           <HeadphoneOff aria-hidden="true" className="size-3.5" />
-          <span className="sr-only">deafened</span>
+          <span className="sr-only">, deafened</span>
         </span>
       ) : muted ? (
         <span className="flex shrink-0 text-muted-foreground">
           <MicOff aria-hidden="true" className="size-3.5" />
-          <span className="sr-only">muted</span>
+          <span className="sr-only">, muted</span>
         </span>
       ) : null}
     </SidebarMenuSubItem>

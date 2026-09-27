@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { meQueryOptions } from '@/features/auth'
+import { VoiceSessionEffects } from '@/features/voice'
 import { SidebarColumns } from './sidebar-columns'
 
 interface AppShellProps {
@@ -32,6 +33,7 @@ export function AppShell({ children, className }: AppShellProps) {
         </Sidebar>
         <SidebarInset>{children}</SidebarInset>
       </SidebarProvider>
+      <VoiceSessionEffects />
     </TooltipProvider>
   )
 }

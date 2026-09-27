@@ -2,7 +2,8 @@ import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { vi } from 'vitest'
-import { useVoiceStore } from '@/features/voice'
+import { useVoiceSession, voiceKeys } from '@/features/voice'
+import { setVoiceConnected } from '@/test/voice'
 import { failOnConsoleError } from '@/test/console-guard'
 import { fakeSupabase, type FakeChannel } from '@/test/fake-supabase'
 import { nightOwls, pitLane, roomPath } from '@/test/fixtures/rooms'
@@ -189,23 +190,43 @@ describe('useRoomEvents: channel events', () => {
   })
 
   it('channel:deleted for the voice channel you are in resets the voice session', async () => {
-    useVoiceStore.setState({
-      connection: {
-        status: 'connected',
-        roomId: ROOM_ID,
-        roomName: nightOwls.room.name,
-        channelId: voice.id,
-        channelName: voice.name,
-      },
-    })
+    setVoiceConnected(nightOwls, voice)
     const { topic, router } = await openChannel('general')
 
     await broadcast(topic, [['channel:deleted', { id: voice.id, roomId: ROOM_ID }]])
 
-    expect(useVoiceStore.getState().connection?.channelId).not.toBe(voice.id)
+    expect(useVoiceSession.getState()).toMatchObject({ status: 'idle', channelId: null })
     expect(channelNames('Voice channels')).toEqual(['late night'])
     expect(router.state.location.pathname).toBe(roomPath(nightOwls, 'general'))
     expect(screen.queryByText(/was deleted/)).not.toBeInTheDocument()
+  })
+
+  it("voice:participants replaces a voice channel's list and ignores unknown channels", async () => {
+    const maya = nightOwls.members.find((m) => m.user.displayName === 'Maya')!.user
+    const jun = nightOwls.members.find((m) => m.user.displayName === 'Jun')!.user
+    const { topic, queryClient } = await openChannel('general')
+    const inVoice = () => screen.queryByRole('list', { name: 'In voice' })
+    await vi.waitFor(() =>
+      expect(queryClient.getQueryData(voiceKeys.participants(ROOM_ID))).toBeDefined(),
+    )
+
+    await broadcast(topic, [['voice:participants', { channelId: voice.id, participants: [maya, jun] }]])
+    expect(within(inVoice()!).getAllByRole('listitem')).toHaveLength(2)
+    expect(within(inVoice()!).getByText('Maya')).toBeInTheDocument()
+    expect(within(inVoice()!).getByText('Jun')).toBeInTheDocument()
+
+    // The full list: replaced, not merged.
+    await broadcast(topic, [['voice:participants', { channelId: voice.id, participants: [jun] }]])
+    expect(within(inVoice()!).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(inVoice()!).getByText('Jun')).toBeInTheDocument()
+
+    // A text channel and an unknown channel are ignored.
+    const before = queryClient.getQueryData(voiceKeys.participants(ROOM_ID))
+    await broadcast(topic, [
+      ['voice:participants', { channelId: general.id, participants: [maya] }],
+      ['voice:participants', { channelId: NEW_CHANNEL_ID, participants: [maya] }],
+    ])
+    expect(queryClient.getQueryData(voiceKeys.participants(ROOM_ID))).toBe(before)
   })
 
   it('ignores channel events for another room and invalid payloads', async () => {

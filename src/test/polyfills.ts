@@ -43,6 +43,17 @@ if (!Element.prototype.releasePointerCapture) {
   Element.prototype.releasePointerCapture = () => {}
 }
 
+// jsdom doesn't implement isContentEditable (push-to-talk ignores keys typed into editors).
+if (!('isContentEditable' in HTMLElement.prototype)) {
+  Object.defineProperty(HTMLElement.prototype, 'isContentEditable', {
+    configurable: true,
+    get(this: HTMLElement) {
+      const host = this.closest('[contenteditable]')
+      return host !== null && host.getAttribute('contenteditable') !== 'false'
+    },
+  })
+}
+
 // TanStack Router's scroll restoration calls window.scrollTo, which jsdom doesn't implement.
 window.scrollTo = () => {}
 

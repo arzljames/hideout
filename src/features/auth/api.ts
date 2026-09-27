@@ -5,8 +5,7 @@ import { api, toApiError, withNetworkErrors } from '@/lib/api/client'
 import { retryTransient } from '@/lib/api/retry'
 import type { components } from '@/lib/api/schema.gen'
 import { stopRealtime } from '@/lib/realtime/connection'
-import { resetVoiceStore } from '@/features/voice'
-import { useVoiceSession } from '@/stores/voice-session'
+import { endVoiceSession } from '@/features/voice'
 
 export type Me = components['schemas']['Me']
 
@@ -43,8 +42,7 @@ export function endSession(
     try {
       stopRealtime()
       await queryClient.cancelQueries()
-      resetVoiceStore()
-      useVoiceSession.getState().leave()
+      endVoiceSession()
       queryClient.setQueryData(meQueryOptions.queryKey, null)
       await goToSignIn()
       queryClient.getQueryCache().clear()
