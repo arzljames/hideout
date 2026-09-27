@@ -40,7 +40,7 @@ describe('openSteamSignIn', () => {
     expect(nonce).toBe('1111-2222-3333-4444-5555')
     expect(storedDuringOpen).toBe(nonce)
     // Opened blank, detached from this tab, then sent to Steam.
-    expect(open).toHaveBeenCalledWith('', 'hideout-steam-sign-in')
+    expect(open).toHaveBeenCalledWith('', '_blank')
     expect(popup.opener).toBeNull()
     expect(popup.location.href).toBe(STEAM_URL)
     expect(window.sessionStorage.getItem(STORAGE_KEY)).toBeNull()
