@@ -4,18 +4,18 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { UserAvatar } from '@/components/user-avatar'
 import { cn } from '@/lib/utils'
-import type { PendingInvite } from '../sample-pending-invites'
+import type { InboxInvite } from '../types'
 
 interface InviteRequestCardProps {
-  invite: PendingInvite
-  onAccept: (invite: PendingInvite) => void
-  onDecline: (invite: PendingInvite) => void
+  invite: InboxInvite
+  onAccept: (invite: InboxInvite) => void
+  onDecline: (invite: InboxInvite) => void
   /** Lets the inbox move focus to this card's Accept button after a neighbour is removed. */
   acceptRef?: Ref<HTMLButtonElement>
   className?: string
 }
 
-/** One pending invite: room, who invited you and when, Decline and Accept. */
+/** One pending direct invite: room, who invited you, Decline and Accept. */
 export function InviteRequestCard({
   invite,
   onAccept,
@@ -24,22 +24,22 @@ export function InviteRequestCard({
   className,
 }: InviteRequestCardProps) {
   const nameId = useId()
-  const { room, inviter } = invite
+  const { room, invitedBy } = invite
 
   return (
     <article aria-labelledby={nameId} className={cn(className)}>
       <Card>
         <CardContent className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <RoomIcon icon={{ kind: 'emoji', emoji: room.emoji }} name={room.name} size="md" />
+            <RoomIcon icon={room.icon} name={room.name} size="md" />
             <div className="min-w-0">
               <h2 id={nameId} className="truncate text-sm font-semibold">
-                {room.name}
+                <bdi>{room.name}</bdi>
               </h2>
               <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <UserAvatar name={inviter.name} tone={inviter.tone} size="sm" />
+                <UserAvatar name={invitedBy.displayName} src={invitedBy.avatarUrl} size="sm" />
                 <span className="truncate">
-                  {inviter.name} invited you · {invite.sentLabel}
+                  <bdi>{invitedBy.displayName}</bdi> invited you
                 </span>
               </p>
             </div>

@@ -133,11 +133,11 @@ describe('room routes', () => {
 })
 
 describe('room rail', () => {
-  it('names the Home link with the pending invite count', async () => {
+  it('names the Home link (no pending invites)', async () => {
     await renderRoute(roomPath(nightOwls, 'general'))
 
     const rail = screen.getByRole('navigation', { name: 'Rooms' })
-    const home = within(rail).getByRole('link', { name: 'Home, 3 pending invites' })
+    const home = within(rail).getByRole('link', { name: 'Home' })
     expect(home).toHaveAttribute('href', '/')
     expect(home).not.toHaveAttribute('aria-current')
   })
@@ -166,7 +166,7 @@ describe('room rail', () => {
     await renderRoute('/')
 
     const rail = screen.getByRole('navigation', { name: 'Rooms' })
-    expect(within(rail).getByRole('link', { name: 'Home, 3 pending invites' })).toHaveAttribute(
+    expect(within(rail).getByRole('link', { name: 'Home' })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -287,8 +287,7 @@ describe('nav panel', () => {
     await renderRoute('/')
 
     expect(screen.getByRole('navigation', { name: 'Home sections' })).toBeInTheDocument()
-    // Invites is a link to the inbox now, named with its pending count.
-    expect(screen.getByRole('link', { name: 'Invites 3 pending' })).toHaveAttribute('href', '/invites')
+    expect(screen.getByRole('link', { name: 'Invites' })).toHaveAttribute('href', '/invites')
     expect(screen.queryByRole('navigation', { name: 'Channels' })).not.toBeInTheDocument()
   })
 

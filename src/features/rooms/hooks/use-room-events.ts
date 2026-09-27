@@ -18,7 +18,7 @@ import {
   whenChannelReorderSettles,
 } from '../channel-cache'
 import { roomKeys, sameRoomId } from '../room-cache'
-import { applyRoomUpdated } from '../room-events'
+import { applyMemberJoined, applyRoomUpdated } from '../room-events'
 import type { Channel, ReorderChannelsBody } from '../types'
 import { useLeaveChannelIfViewing } from './use-leave-channel-if-viewing'
 import { useRoomGone } from './use-room-gone'
@@ -67,6 +67,7 @@ export interface RoomEventsState {
  *   room is refetched once the reorder settles (the server's order wins, whoever was last). Our
  *   own echo (the exact order an in-flight PUT sent) needs no refetch; an update meanwhile keeps
  *   the channel's optimistic position and also refetches once the reorder settles.
+ * - `member:joined` adds the member in role order (deduped by user id).
  * - `channel:deleted` leaves the channel (and its voice session) if open, forgets it, and toasts
  *   when it was on screen. A delete this tab has in flight is left to its mutation.
  * - Events naming another room are ignored.
@@ -199,6 +200,10 @@ export function useRoomEvents(roomId: string): RoomEventsState {
         case 'channel:deleted':
           if (!sameRoomId(parsed.data.roomId, roomId)) return
           void onChannelDeleted(parsed.data.id)
+          return
+        case 'member:joined':
+          if (!sameRoomId(parsed.data.member.roomId, roomId)) return
+          applyMemberJoined(queryClient, roomId, parsed.data)
           return
       }
     },

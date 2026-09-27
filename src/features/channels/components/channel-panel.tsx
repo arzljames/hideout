@@ -9,7 +9,8 @@ import {
   SidebarHeader,
   SidebarMenu,
 } from '@/components/ui/sidebar'
-import { RoomMenu, type RoomDetail } from '@/features/rooms'
+import type { RoomDetail } from '@/features/rooms'
+import { RoomMenu } from './room-menu'
 import { CreateChannelDialog } from './create-channel-dialog'
 import { SortableChannelList } from './sortable-channel-list'
 import { TextChannelItem } from './text-channel-item'

@@ -1,7 +1,8 @@
 import { Hash, UserPlus, Volume2 } from 'lucide-react'
 import { AppHeader } from '@/components/app-header'
 import { Button } from '@/components/ui/button'
-import { InviteDialog, MemberPanelToggle, type Channel, type RoomDetail } from '@/features/rooms'
+import { InviteDialog } from '@/features/invites'
+import { MemberPanelToggle, type Channel, type RoomDetail } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 
 interface ChannelHeaderProps {
@@ -19,7 +20,7 @@ export function ChannelHeader({ room, channel, className }: ChannelHeaderProps) 
       icon={channel.type === 'text' ? <Hash aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
       actions={
         <>
-          <InviteDialog roomName={room.room.name}>
+          <InviteDialog roomId={room.room.id} roomName={room.room.name} myRole={room.myRole}>
             <Button type="button" variant="outline" size="sm">
               <UserPlus aria-hidden="true" />
               Invite

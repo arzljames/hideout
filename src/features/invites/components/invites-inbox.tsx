@@ -1,11 +1,13 @@
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { Inbox } from 'lucide-react'
 import { useLayoutEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { AppHeader } from '@/components/app-header'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { isolate } from '@/lib/bidi'
 import { cn } from '@/lib/utils'
-import { usePendingInvitesStore } from '../pending-invites-store'
-import type { PendingInvite } from '../sample-pending-invites'
+import { inboxQueryOptions, useAcceptInvite, useDeclineInvite } from '../api'
+import { isInboxInviteLive } from '../invite-cache'
+import type { InboxInvite } from '../types'
 import { InviteRequestCard } from './invite-request-card'
 import { InvitesEmptyState } from './invites-empty-state'
 
@@ -16,11 +18,12 @@ interface InvitesInboxProps {
   className?: string
 }
 
-/** The Invites page: pending room invites with Accept / Decline. */
+/** The Invites page: pending direct invites with Accept / Decline. */
 export function InvitesInbox({ className }: InvitesInboxProps) {
-  const invites = usePendingInvitesStore((s) => s.invites)
-  const accept = usePendingInvitesStore((s) => s.accept)
-  const decline = usePendingInvitesStore((s) => s.decline)
+  const { data } = useSuspenseQuery(inboxQueryOptions)
+  const invites = data.filter((invite) => isInboxInviteLive(invite))
+  const accept = useAcceptInvite()
+  const decline = useDeclineInvite()
   const [announcement, setAnnouncement] = useState('')
 
   const acceptButtons = useRef(new Map<string, HTMLButtonElement>())
@@ -32,35 +35,33 @@ export function InvitesInbox({ className }: InvitesInboxProps) {
   useLayoutEffect(() => {
     const target = focusAfterRemoval.current
     if (!target) return
+    if (target.kind === 'accept' && !acceptButtons.current.has(target.inviteId)) return
     focusAfterRemoval.current = null
     if (target.kind === 'empty') emptyTitleRef.current?.focus()
     else acceptButtons.current.get(target.inviteId)?.focus()
-  }, [invites])
+  }, [data])
 
-  function planFocus(removed: PendingInvite) {
-    const index = invites.findIndex((invite) => invite.id === removed.id)
+  function planFocus(removed: InboxInvite) {
+    const index = invites.findIndex((invite) => invite.inviteId === removed.inviteId)
     const neighbour = invites[index + 1] ?? invites[index - 1]
     focusAfterRemoval.current = neighbour
-      ? { kind: 'accept', inviteId: neighbour.id }
+      ? { kind: 'accept', inviteId: neighbour.inviteId }
       : { kind: 'empty' }
   }
 
-  function handleAccept(invite: PendingInvite) {
-    // TODO(api): accept invite, invalidate rooms, navigate to the room.
+  function handleAccept(invite: InboxInvite) {
     planFocus(invite)
-    accept(invite.id)
-    // sonner's toaster is itself a polite live region, so the toast announces the join; writing it
-    // to our region too would be read twice.
+    // The success toast announces the join (sonner is a live region); don't repeat it here.
     setAnnouncement('')
-    toast.success(`Joined ${invite.room.name}`)
+    accept.mutate(invite)
   }
 
-  function handleDecline(invite: PendingInvite) {
-    // TODO(api): decline invite.
+  function handleDecline(invite: InboxInvite) {
     planFocus(invite)
-    decline(invite.id)
-    // Name the room so declining twice in a row still changes the text (and is announced).
-    setAnnouncement(`Declined invite to ${invite.room.name}`)
+    decline.mutate(invite, {
+      // Name the room so declining twice in a row still changes the text (and is announced).
+      onSuccess: () => setAnnouncement(`Declined invite to ${isolate(invite.room.name)}`),
+    })
   }
 
   const count = invites.length
@@ -79,16 +80,20 @@ export function InvitesInbox({ className }: InvitesInboxProps) {
 
       {count > 0 ? (
         <ScrollArea className="min-h-0 flex-1">
-          <ul role="list" aria-label="Pending invites" className="mx-auto flex max-w-xl flex-col gap-3 p-4 md:py-8">
+          <ul
+            role="list"
+            aria-label="Pending invites"
+            className="mx-auto flex max-w-xl flex-col gap-3 p-4 md:py-8"
+          >
             {invites.map((invite) => (
-              <li key={invite.id}>
+              <li key={invite.inviteId}>
                 <InviteRequestCard
                   invite={invite}
                   onAccept={handleAccept}
                   onDecline={handleDecline}
                   acceptRef={(node) => {
-                    if (node) acceptButtons.current.set(invite.id, node)
-                    else acceptButtons.current.delete(invite.id)
+                    if (node) acceptButtons.current.set(invite.inviteId, node)
+                    else acceptButtons.current.delete(invite.inviteId)
                   }}
                 />
               </li>

@@ -1,53 +1,50 @@
+import type { ReactNode } from 'react'
 import { RoomIcon } from '@/components/room-icon'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { UserAvatar } from '@/components/user-avatar'
 import { cn } from '@/lib/utils'
-import type { InvitePreview } from '../sample-invite'
+import type { InvitePreview } from '../types'
 
 interface InviteCardProps {
-  invite: InvitePreview
+  preview: InvitePreview
+  /** Join or sign-in controls, below the room details. */
+  children?: ReactNode
   className?: string
 }
 
-export function InviteCard({ invite, className }: InviteCardProps) {
-  const { inviter, room, landingChannel } = invite
-  const memberLabel = room.memberCount === 1 ? 'member' : 'members'
+/** A link invite's room, member count and inviter, with the caller's actions below. */
+export function InviteCard({ preview, children, className }: InviteCardProps) {
+  const { room, memberCount, invitedBy } = preview
 
   return (
     <Card className={cn('[--card-spacing:--spacing(8)]', className)}>
       <CardContent className="flex flex-col items-center text-center">
-        <RoomIcon icon={{ kind: 'emoji', emoji: room.emoji }} name={room.name} />
+        <RoomIcon icon={room.icon} name={room.name} />
 
         <p className="mt-5 flex items-center gap-1.5 text-sm text-muted-foreground">
-          <UserAvatar name={inviter.name} tone={inviter.tone} size="sm" />
-          <span>
-            <span className="font-semibold text-foreground">{inviter.name}</span> invited you to
-            join
-          </span>
+          {invitedBy ? (
+            <>
+              <UserAvatar name={invitedBy.displayName} src={invitedBy.avatarUrl} size="sm" />
+              <span>
+                <bdi className="font-semibold text-foreground">{invitedBy.displayName}</bdi>{' '}
+                invited you to join
+              </span>
+            </>
+          ) : (
+            <span>You&apos;re invited to join</span>
+          )}
         </p>
 
-        <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight">{room.name}</h1>
+        <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight">
+          <bdi>{room.name}</bdi>
+        </h1>
 
-        <ul role="list" className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2 rounded-full bg-presence-online" />
-            {room.onlineCount} online
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2 rounded-full border border-muted-foreground" />
-            {room.memberCount} {memberLabel}
-          </li>
-        </ul>
-
-        {/* TODO(api): accept invite, then navigate to the landing channel */}
-        <Button type="button" size="lg" className="mt-6 w-full">
-          Join room
-        </Button>
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          You&apos;ll land in <span className="font-medium text-foreground">#{landingChannel}</span>.
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span aria-hidden="true" className="size-2 rounded-full border border-muted-foreground" />
+          {memberCount} {memberCount === 1 ? 'member' : 'members'}
         </p>
+
+        <div className="mt-6 flex w-full flex-col gap-3">{children}</div>
       </CardContent>
     </Card>
   )

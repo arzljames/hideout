@@ -9,13 +9,11 @@ export {
   useUpdateRoom,
 } from './api'
 export { CreateRoomDialog } from './components/create-room-dialog'
-export { InviteDialog } from './components/invite-dialog'
 export { MemberList } from './components/member-list'
 export { MemberPanelToggle } from './components/member-panel-toggle'
 export { RoomEmojiGrid } from './components/room-emoji-grid'
 export { RoomError } from './components/room-error'
 export { RoomLayout } from './components/room-layout'
-export { RoomMenu } from './components/room-menu'
 export { RoomNoChannels } from './components/room-no-channels'
 export { RoomNotFound } from './components/room-not-found'
 export { RoomSkeleton } from './components/room-skeleton'

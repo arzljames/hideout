@@ -12,12 +12,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { Role } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 import { InviteLinkTab } from './invite-link-tab'
 import { InviteSteamTab } from './invite-steam-tab'
 
 interface InviteDialogProps {
+  roomId: string
   roomName: string
+  /** Links are for owners and admins; plain members only see the Steam user form. */
+  myRole: Role
   /** Optional trigger, rendered via `DialogTrigger asChild`; Radix returns focus to it. */
   children?: ReactNode
   /** Controlled open state, for opening from somewhere that isn't a DialogTrigger (a menu item). */
@@ -28,15 +32,22 @@ interface InviteDialogProps {
   className?: string
 }
 
-/** Invite people to a room by link or by Steam user. */
+/**
+ * Invite people to a room: by link (owner/admin) or by Steam account (any member). The content
+ * unmounts on close, so a created link is never shown again after the dialog closes.
+ */
 export function InviteDialog({
+  roomId,
   roomName,
+  myRole,
   children,
   open,
   onOpenChange,
   returnFocusRef,
   className,
 }: InviteDialogProps) {
+  const canCreateLinks = myRole !== 'member'
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
@@ -51,30 +62,39 @@ export function InviteDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle>Invite people to {roomName}</DialogTitle>
+          <DialogTitle>
+            Invite people to <bdi>{roomName}</bdi>
+          </DialogTitle>
           <DialogDescription className="sr-only">
-            Share an invite link or invite a Steam user directly.
+            {canCreateLinks
+              ? 'Create an invite link or invite a Steam user directly.'
+              : 'Invite a Steam user directly.'}
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="link">
-          <TabsList className="w-full">
-            <TabsTrigger value="link">
-              <LinkIcon aria-hidden="true" />
-              Invite link
-            </TabsTrigger>
-            <TabsTrigger value="steam">
-              <UserPlus aria-hidden="true" />
-              Invite a Steam user
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="link" className="pt-2">
-            <InviteLinkTab roomName={roomName} />
-          </TabsContent>
-          <TabsContent value="steam" className="pt-2">
-            <InviteSteamTab />
-          </TabsContent>
-        </Tabs>
+        {/* UI-only gate; hideout-api answers 403 to a plain member creating a link. */}
+        {canCreateLinks ? (
+          <Tabs defaultValue="link">
+            <TabsList className="w-full">
+              <TabsTrigger value="link">
+                <LinkIcon aria-hidden="true" />
+                Invite link
+              </TabsTrigger>
+              <TabsTrigger value="steam">
+                <UserPlus aria-hidden="true" />
+                Invite a Steam user
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="link" className="pt-2">
+              <InviteLinkTab roomId={roomId} roomName={roomName} />
+            </TabsContent>
+            <TabsContent value="steam" className="pt-2">
+              <InviteSteamTab roomId={roomId} />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <InviteSteamTab roomId={roomId} />
+        )}
 
         <DialogFooter>
           <DialogClose asChild>

@@ -9,8 +9,11 @@ import {
 const REVOKE = 'You can revoke it any time in Room settings.'
 
 describe('describeInviteLink', () => {
-  it('describes the default (1 hour, 1 use) with a singular "use"', () => {
+  it('describes the default (7 days, no limit)', () => {
     expect(describeInviteLink('Night Owls', DEFAULT_EXPIRY, DEFAULT_MAX_USES)).toBe(
+      `Anyone with this link can join Night Owls until it expires. ${REVOKE}`,
+    )
+    expect(describeInviteLink('Night Owls', '1h', '1')).toBe(
       `Anyone with this link can join Night Owls until it expires or reaches 1 use. ${REVOKE}`,
     )
   })

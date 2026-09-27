@@ -1,6 +1,7 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import { meFixture } from '../fixtures/me'
 import { testRealtimeToken } from '../fixtures/realtime-token'
+import { inviteHandlers } from './invites'
 import { messageHandlers } from './messages'
 import { roomHandlers } from './rooms'
 
@@ -17,6 +18,8 @@ export const handlers: RequestHandler[] = [
   ),
   // The fixture rooms (src/test/fixtures/rooms.ts); unknown room ids get 404.
   ...roomHandlers,
+  // An empty inbox and no active invites; override per test for invite flows.
+  ...inviteHandlers,
   // Empty text channels; sends, edits and deletes succeed without changing them. For history
   // or stateful writes, `server.use(...messageHandlers({ [channelId]: messages }))`.
   ...messageHandlers({}, { persist: false }),

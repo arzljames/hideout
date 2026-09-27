@@ -4,7 +4,6 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import type { RoomDetail } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 import { useEscapeToClose } from '../hooks/use-escape-to-close'
-import { getSampleInviteLinks } from '../sample-invite-links'
 import type { SettingsSection } from '../settings-sections'
 import { ChannelsSection } from './channels-section'
 import { InvitesSection } from './invites-section'
@@ -100,10 +99,7 @@ export function RoomSettingsScreen({
           )}
           {section === 'overview' && <OverviewSection key={roomId} room={room} />}
           {section === 'members' && <MembersSection room={room} />}
-          {section === 'invites' && (
-            // TODO(api): roomInvitesQueryOptions(room.id), owner/admin only.
-            <InvitesSection roomName={roomName} inviteLinks={getSampleInviteLinks(roomId)} />
-          )}
+          {section === 'invites' && <InvitesSection room={room} />}
           {section === 'channels' && <ChannelsSection room={room} />}
         </div>
       </main>

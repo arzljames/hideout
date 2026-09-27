@@ -4,8 +4,10 @@ import { UserAvatar } from '@/components/user-avatar'
 import { cn } from '@/lib/utils'
 
 interface TopBarProps {
-  user: {
+  /** The signed-in user; omit when signed out. */
+  user?: {
     name: string
+    avatarUrl?: string | null
     tone?: ComponentProps<typeof UserAvatar>['tone']
   }
   className?: string
@@ -24,8 +26,18 @@ export function TopBar({ user, className }: TopBarProps) {
 
       <div className="flex items-center gap-2">
         <ThemeToggle />
-        <UserAvatar name={user.name} tone={user.tone} size="sm" status="online" />
-        <span className="max-w-32 truncate text-sm font-medium">{user.name}</span>
+        {user && (
+          <>
+            <UserAvatar
+              name={user.name}
+              src={user.avatarUrl}
+              tone={user.tone}
+              size="sm"
+              status="online"
+            />
+            <bdi className="max-w-32 truncate text-sm font-medium">{user.name}</bdi>
+          </>
+        )}
       </div>
     </header>
   )

@@ -10,8 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import type { RoomDetail } from '../types'
-import { InviteDialog } from './invite-dialog'
+import { InviteDialog } from '@/features/invites'
+import type { RoomDetail } from '@/features/rooms'
 
 interface RoomMenuProps {
   room: RoomDetail
@@ -79,7 +79,9 @@ export function RoomMenu({ room, className }: RoomMenuProps) {
       </DropdownMenu>
 
       <InviteDialog
+        roomId={room.room.id}
         roomName={room.room.name}
+        myRole={room.myRole}
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         returnFocusRef={triggerRef}

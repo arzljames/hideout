@@ -1,5 +1,6 @@
-// TODO(api): align option values with the create-invite request in the hideout-api contract.
+import type { InviteExpiresIn, InviteMaxUses as ContractMaxUses } from './types'
 
+// Values match CreateInviteBody (link) in the hideout-api contract; `satisfies` keeps them honest.
 export const EXPIRY_OPTIONS = [
   { value: '30m', label: '30 minutes' },
   { value: '1h', label: '1 hour' },
@@ -8,7 +9,7 @@ export const EXPIRY_OPTIONS = [
   { value: '1d', label: '1 day' },
   { value: '7d', label: '7 days' },
   { value: 'never', label: 'Never' },
-] as const
+] as const satisfies readonly { value: InviteExpiresIn; label: string }[]
 
 export const MAX_USES_OPTIONS = [
   { value: '1', label: '1' },
@@ -18,13 +19,28 @@ export const MAX_USES_OPTIONS = [
   { value: '50', label: '50' },
   { value: '100', label: '100' },
   { value: 'unlimited', label: 'No limit' },
-] as const
+] as const satisfies readonly { value: `${ContractMaxUses}` | 'unlimited'; label: string }[]
 
 export type InviteExpiry = (typeof EXPIRY_OPTIONS)[number]['value']
 export type InviteMaxUses = (typeof MAX_USES_OPTIONS)[number]['value']
 
-export const DEFAULT_EXPIRY: InviteExpiry = '1h'
-export const DEFAULT_MAX_USES: InviteMaxUses = '1'
+// The API's defaults: 7 days, unlimited uses.
+export const DEFAULT_EXPIRY: InviteExpiry = '7d'
+export const DEFAULT_MAX_USES: InviteMaxUses = 'unlimited'
+
+const MAX_USES_VALUES: Record<Exclude<InviteMaxUses, 'unlimited'>, ContractMaxUses> = {
+  '1': 1,
+  '5': 5,
+  '10': 10,
+  '25': 25,
+  '50': 50,
+  '100': 100,
+}
+
+/** The request's `maxUses` for a Max uses choice (null = unlimited). */
+export function maxUsesForRequest(value: InviteMaxUses): ContractMaxUses | null {
+  return value === 'unlimited' ? null : MAX_USES_VALUES[value]
+}
 
 export function isInviteExpiry(value: string): value is InviteExpiry {
   return EXPIRY_OPTIONS.some((option) => option.value === value)
