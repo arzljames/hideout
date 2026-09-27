@@ -1,13 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
+import { leaveVoiceIn } from '@/features/voice'
 import { roomMutationKeys } from '../api'
 import { applyMemberRemoved, applyRoomDeleted, roomGoneMessage, type RoomGoneKind } from '../room-events'
 import { useLeaveRoomIfViewing } from './use-leave-room-if-viewing'
 
 /**
  * For realtime "room gone" signals (`room:deleted`, `member:removed`, or a 404 when rechecking
- * a room): leave the room if it's on screen, then forget it and toast. No toast when the room
+ * a room): leave its voice channel if you're in one, leave the room if it's on screen, then
+ * forget it and toast. No toast when the room
  * wasn't cached (already handled). A `deleted` for a room this tab is deleting is left to the
  * delete mutation, which navigates and toasts itself.
  */
@@ -17,6 +19,7 @@ export function useRoomGone() {
 
   return useCallback(
     async (roomId: string, kind: RoomGoneKind): Promise<void> => {
+      leaveVoiceIn({ roomId })
       if (
         kind === 'deleted' &&
         queryClient.isMutating({ mutationKey: roomMutationKeys.delete(roomId) }) > 0

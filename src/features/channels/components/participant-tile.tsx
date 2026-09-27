@@ -18,8 +18,8 @@ interface ParticipantTileProps {
 }
 
 /**
- * A person in a voice channel: large avatar, name, activity and voice state badges. Not rendered
- * yet: TODO(livekit): VoiceChannelView lists participants from the voice session.
+ * A person in a voice channel: large avatar, name, activity and voice state badges. Mute and
+ * deafen are only known for yourself.
  */
 export function ParticipantTile({
   user,

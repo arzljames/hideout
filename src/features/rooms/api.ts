@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { api, ApiError, toApiError, withNetworkErrors } from '@/lib/api/client'
 import { retryTransient } from '@/lib/api/retry'
+import { leaveVoiceIn } from '@/features/voice'
 import {
   dropRoom,
   getCachedRoomName,
@@ -193,6 +194,7 @@ export function useDeleteRoom(roomId: string) {
     },
     onSuccess: async () => {
       const name = getCachedRoomName(queryClient, roomId)
+      leaveVoiceIn({ roomId })
       await navigate({ to: '/', replace: true })
       dropRoom(queryClient, roomId)
       toast.success(name ? `Deleted ${name}` : 'Room deleted')

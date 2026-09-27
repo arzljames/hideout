@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/field'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { cn } from '@/lib/utils'
-import type { VoiceInputMode } from '../voice-store'
+import type { VoiceInputMode } from '../voice-prefs'
 
 const MODES: { value: VoiceInputMode; title: string; description: string }[] = [
   { value: 'voice-activity', title: 'Voice activity', description: 'Your mic opens when you talk.' },

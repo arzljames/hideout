@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http } from 'msw'
-import { useVoiceStore } from '@/features/voice'
+import { useVoiceSession } from '@/features/voice'
+import { setVoiceConnected } from '@/test/voice'
 import { isolate } from '@/lib/bidi'
 import { apiError, chooseChannelAction, sidebarNames } from '@/test/channels'
 import { failOnConsoleError } from '@/test/console-guard'
@@ -70,41 +71,25 @@ describe('DeleteChannelDialog', () => {
 
   it('deleting the voice channel you are connected to ends the voice session', async () => {
     const voice = channelOf(nightOwls, 'voice')
-    useVoiceStore.setState({
-      connection: {
-        status: 'connected',
-        roomId: nightOwls.room.id,
-        roomName: nightOwls.room.name,
-        channelId: voice.id,
-        channelName: voice.name,
-      },
-    })
+    setVoiceConnected(nightOwls, voice)
     const { user, confirm } = await openDelete('voice')
 
     await user.click(confirm)
 
     expect(await screen.findByText(`Deleted #${isolate('voice')}`)).toBeInTheDocument()
-    // Reset to the store's initial state (TODO(livekit): that's still the design sample).
-    expect(useVoiceStore.getState().connection?.channelId).not.toBe(voice.id)
+    expect(useVoiceSession.getState()).toMatchObject({ status: 'idle', channelId: null })
     expect(sidebarNames('Voice channels')).toEqual(['late night'])
   })
 
   it('leaves the voice session alone when deleting a different voice channel', async () => {
     const voice = channelOf(nightOwls, 'voice')
-    const connection = {
-      status: 'connected' as const,
-      roomId: nightOwls.room.id,
-      roomName: nightOwls.room.name,
-      channelId: voice.id,
-      channelName: voice.name,
-    }
-    useVoiceStore.setState({ connection })
+    setVoiceConnected(nightOwls, voice)
     const { user, confirm } = await openDelete('late night')
 
     await user.click(confirm)
 
     expect(await screen.findByText(`Deleted #${isolate('late night')}`)).toBeInTheDocument()
-    expect(useVoiceStore.getState().connection).toEqual(connection)
+    expect(useVoiceSession.getState()).toMatchObject({ status: 'connected', channelId: voice.id })
   })
 
   it("disables Delete for the room's only text channel and says why", async () => {

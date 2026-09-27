@@ -15,6 +15,7 @@ import {
 } from '@/features/rooms'
 import { api, ApiError, toApiError, withNetworkErrors } from '@/lib/api/client'
 import { isolate } from '@/lib/bidi'
+import { leaveVoiceIn } from '@/features/voice'
 import type { ChangeRoleBody } from './types'
 import { MEMBER_MESSAGES, memberErrorMessage, useMemberErrorEffects } from './member-errors'
 
@@ -58,6 +59,8 @@ export function useLeaveRoom(roomId: string) {
     },
     onSuccess: async () => {
       const name = getCachedRoomName(queryClient, roomId)
+      // The API also disconnects us; leaving first avoids a "disconnected" toast.
+      leaveVoiceIn({ roomId })
       // Navigate first, so the mounted room screen doesn't refetch the room once it's dropped.
       await navigate({ to: '/', replace: true })
       dropRoom(queryClient, roomId)

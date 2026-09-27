@@ -5,10 +5,10 @@ import { toast } from 'sonner'
 import { resetMessageSender } from '@/features/messages/message-sender'
 import { resetPendingMessagesStore } from '@/features/messages/pending-messages-store'
 import { resetMemberPanelStore } from '@/features/rooms/member-panel-store'
-import { resetVoiceStore } from '@/features/voice/voice-store'
+import { resetVoiceStore } from '@/features/voice/voice-session'
 import { setUnauthenticatedHandler } from '@/lib/api/client'
 import { setRealtimeSignedOutHandler, stopRealtime } from '@/lib/realtime/connection'
-import { useVoiceSession } from '@/stores/voice-session'
+import { fakeLiveKit } from './fake-livekit'
 import { fakeSupabase } from './fake-supabase'
 import { server } from './msw/server'
 
@@ -24,6 +24,12 @@ function resetThemeState() {
   document.documentElement.removeAttribute('style')
 }
 
+// No test talks to LiveKit either: the real enums with a fake Room and mic (see fake-livekit.ts).
+vi.mock('livekit-client', async (importActual) => {
+  const { fakeLiveKitModule } = await import('./fake-livekit')
+  return fakeLiveKitModule(await importActual<typeof import('livekit-client')>())
+})
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 beforeEach(() => resetThemeState())
 afterEach(() => {
@@ -31,8 +37,9 @@ afterEach(() => {
   cleanup()
   // Zustand stores are module singletons; start every test from their initial state.
   resetVoiceStore()
+  fakeLiveKit.reset()
+  vi.unstubAllGlobals()
   resetMemberPanelStore()
-  useVoiceSession.getState().leave()
   // renderRoute registers a handler bound to that test's router and QueryClient.
   setUnauthenticatedHandler(undefined)
   setRealtimeSignedOutHandler(undefined)
