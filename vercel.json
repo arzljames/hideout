@@ -3,6 +3,7 @@
     {
       "source": "/api/:path*",
       "destination": "https://hideout-api-silk.vercel.app/api/:path*"
-    }
+    },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
