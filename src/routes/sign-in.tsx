@@ -4,7 +4,6 @@ import {
   meQueryOptions,
   SignInScreen,
   useConsumeAuthError,
-  useSteamSignIn,
   type Me,
 } from '@/features/auth'
 
@@ -27,13 +26,10 @@ function SignInRoute() {
   const { auth_error } = Route.useSearch()
   const navigate = Route.useNavigate()
   // Strip the one-shot param from the URL; the screen keeps showing the message.
-  const urlAuthError = useConsumeAuthError(
+  const authError = useConsumeAuthError(
     auth_error,
     () => void navigate({ to: '/sign-in', search: {}, replace: true }),
   )
-  const steam = useSteamSignIn()
-  // Once a popup attempt starts, only its own outcome is shown.
-  const authError = steam.started ? steam.authError : urlAuthError
 
-  return <SignInScreen authError={authError} onSignIn={steam.start} waiting={steam.waiting} />
+  return <SignInScreen authError={authError} />
 }

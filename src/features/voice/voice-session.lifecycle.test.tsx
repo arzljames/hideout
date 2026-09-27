@@ -236,7 +236,7 @@ describe('leaving voice', () => {
     await user.click(screen.getByRole('button', { name: 'Arzl, account menu' }))
     await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
 
-    expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
     expect(useVoiceSession.getState()).toMatchObject({
       status: 'idle',
       channelId: null,

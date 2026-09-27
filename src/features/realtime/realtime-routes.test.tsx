@@ -140,7 +140,7 @@ describe('useUserEvents', () => {
       channel.emitBroadcast('session:expired', {})
       await vi.waitFor(() => expect(router.state.location.pathname).toBe('/sign-in'))
     })
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
     expect(getRealtimeStatus()).toBe('idle')
     expect(getRealtimeAccessToken()).toBeNull()
     expect(fakeSupabase.removeAllChannels).toHaveBeenCalledTimes(1)

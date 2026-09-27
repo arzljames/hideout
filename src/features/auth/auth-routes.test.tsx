@@ -45,7 +45,7 @@ describe('auth routes', () => {
     const { router } = await renderRoute('/')
 
     expect(router.state.location.pathname).toBe('/sign-in')
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Home' })).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -56,7 +56,7 @@ describe('auth routes', () => {
     const { router } = await renderRoute('/rooms/night-owls/settings')
 
     expect(router.state.location.pathname).toBe('/sign-in')
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
   })
 
   it('carries a failed sign-in to /sign-in, explains it, and strips auth_error from the URL', async () => {
@@ -70,7 +70,7 @@ describe('auth routes', () => {
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent("Couldn't sign you in")
     expect(alert).toHaveTextContent(RATE_LIMITED_MESSAGE)
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
   })
 
   it('shows the generic message for an auth_error code it does not know', async () => {
@@ -89,7 +89,7 @@ describe('auth routes', () => {
     const { router } = await renderRoute('/?auth_error=%3Cscript%3E')
 
     expect(router.state.location.pathname).toBe('/sign-in')
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -138,7 +138,7 @@ describe('auth routes', () => {
     const { router } = await renderRoute('/sign-in')
 
     expect(router.state.location.pathname).toBe('/sign-in')
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
   })
 
   it('still shows the sign-in screen when the API is unreachable', async () => {
@@ -147,7 +147,7 @@ describe('auth routes', () => {
     const { router } = await renderRoute('/sign-in')
 
     expect(router.state.location.pathname).toBe('/sign-in')
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
   })
 })
 
@@ -176,7 +176,7 @@ describe('session ending inside the app', () => {
       await api.GET('/api/rooms')
     })
 
-    expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/sign-in')
     await waitFor(() => expect(queryClient.getQueryData(['rooms'])).toBeUndefined())
     expect(queryClient.getQueryData(meQueryOptions.queryKey)).toBeNull()
@@ -194,7 +194,7 @@ describe('session ending inside the app', () => {
       await queryClient.refetchQueries({ queryKey: meQueryOptions.queryKey })
     })
 
-    expect(await screen.findByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/sign-in')
   })
 })

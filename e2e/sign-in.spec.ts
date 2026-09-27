@@ -5,7 +5,7 @@ test.describe('sign-in page', () => {
     await page.goto('/sign-in')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Hideout' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Sign in with Steam' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Sign in with Steam' })).toBeVisible()
     await expect(page.getByRole('contentinfo')).toContainText('Powered by Steam')
   })
 
@@ -30,7 +30,7 @@ test.describe('sign-in page', () => {
 
     test('keeps the sign-in button visible', async ({ page }) => {
       await page.goto('/sign-in')
-      await expect(page.getByRole('button', { name: 'Sign in with Steam' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Sign in with Steam' })).toBeVisible()
     })
   })
 })

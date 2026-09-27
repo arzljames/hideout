@@ -1,6 +1,5 @@
 import { screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
+import { apiUrl } from '@/lib/api/client'
 import { renderWithProviders } from '@/test/render'
 import { SignInScreen } from './sign-in-screen'
 
@@ -10,7 +9,7 @@ describe('SignInScreen', () => {
 
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Hideout' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sign in with Steam' })).toBeInTheDocument()
     expect(
       screen.getByText('Hideout only reads your public profile: name, avatar and current game.'),
     ).toBeInTheDocument()
@@ -34,22 +33,12 @@ describe('SignInScreen', () => {
     }
   })
 
-  it('starts sign-in from a plain button and announces the popup wait', async () => {
-    const user = userEvent.setup()
-    const onSignIn = vi.fn()
-    const { rerender } = renderWithProviders(<SignInScreen onSignIn={onSignIn} />)
+  it('signs in with a plain same-tab link to the API', () => {
+    renderWithProviders(<SignInScreen />)
 
-    const button = screen.getByRole('button', { name: 'Sign in with Steam' })
-    expect(button).toHaveAttribute('type', 'button')
-    expect(screen.getByRole('status')).toBeEmptyDOMElement()
-
-    await user.click(button)
-    expect(onSignIn).toHaveBeenCalledTimes(1)
-
-    rerender(<SignInScreen onSignIn={onSignIn} waiting />)
-    expect(screen.getByRole('status')).toHaveTextContent('Finish signing in in the Steam tab.')
-    // Still enabled, so a closed popup can be reopened.
-    expect(screen.getByRole('button', { name: 'Sign in with Steam' })).toBeEnabled()
+    const link = screen.getByRole('link', { name: 'Sign in with Steam' })
+    expect(link).toHaveAttribute('href', apiUrl('/api/auth/steam'))
+    expect(link).not.toHaveAttribute('target')
   })
 
   it('offers a theme toggle', () => {
