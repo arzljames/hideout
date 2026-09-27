@@ -95,8 +95,8 @@ describe('ChannelPanel', () => {
     expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Invite people',
       'Room settings',
-      'Leave room',
     ])
+    // The owner can't leave: no Leave room item.
   })
 
   it('opens Invite people from the room menu and returns focus to the menu button on close', async () => {

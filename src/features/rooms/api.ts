@@ -117,6 +117,8 @@ export function useCreateRoom({ onCreated }: CreateRoomOptions = {}) {
 /** Mutation keys, so realtime handlers can tell this tab's own in-flight changes apart. */
 export const roomMutationKeys = {
   delete: (roomId: string) => ['rooms', 'delete', roomId] as const,
+  /** Leaving the room (the members feature's useLeaveRoom). */
+  leave: (roomId: string) => ['rooms', 'leave', roomId.toLowerCase()] as const,
 }
 
 const ROOM_UNAVAILABLE_MESSAGE = "This room isn't available anymore."

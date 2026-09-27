@@ -83,6 +83,10 @@ export const roomEventSchemas = {
   }),
   'channel:deleted': z.object({ id, roomId: id }),
   'member:joined': z.object({ member: memberSchema }),
+  // Left or removed; the removed member also gets `member:removed` on their user topic.
+  'member:left': z.object({ roomId: id, userId: id }),
+  // `role` is any contract Role: a transfer sends two (old owner → admin, new owner → owner).
+  'member:role_changed': z.object({ roomId: id, userId: id, role: roleSchema }),
 }
 
 // A message body is at most 2000 Unicode code points (MessageBody in the contract). Counted

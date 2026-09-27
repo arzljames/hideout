@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
-import type { Member, Role } from '@/features/rooms'
+import type { MemberMenuAction, MemberMenuEntry } from '@/features/members'
+import type { Member } from '@/features/rooms'
 import { cn } from '@/lib/utils'
 import { MemberActionsMenu } from './member-actions-menu'
 
@@ -10,26 +11,14 @@ const joinedFormat = new Intl.DateTimeFormat(undefined, { month: 'short', year: 
 const ROLE_LABEL = { owner: 'Owner', admin: 'Admin' } as const
 const ROLE_BADGE = { owner: 'soft', admin: 'subtle' } as const
 
-/**
- * Who may act on whom (design rule; the API decides):
- * - nobody acts on the owner or on themselves;
- * - the owner can change roles and remove anyone else;
- * - admins can only remove plain members (not other admins) and can't change roles.
- */
-// UI-only gate; hideout-api enforces the role on every member mutation.
-function permissions(viewerRole: Role, member: Member, isViewer: boolean) {
-  if (isViewer || member.role === 'owner') return null
-  if (viewerRole === 'owner') return { canChangeRole: true }
-  if (viewerRole === 'admin' && member.role !== 'admin') return { canChangeRole: false }
-  return null
-}
-
 interface MemberSettingsRowProps {
   member: Member
   /** This row is the signed-in user. */
   isViewer: boolean
-  roomName: string
-  viewerRole: Role
+  /** What the viewer may do to this member (see memberActions); none → no menu. */
+  entries?: MemberMenuEntry[]
+  onAction?: (action: MemberMenuAction, returnFocus: HTMLElement | null) => void
+  busy?: boolean
   className?: string
 }
 
@@ -37,11 +26,11 @@ interface MemberSettingsRowProps {
 export function MemberSettingsRow({
   member,
   isViewer,
-  roomName,
-  viewerRole,
+  entries = [],
+  onAction,
+  busy,
   className,
 }: MemberSettingsRowProps) {
-  const allowed = permissions(viewerRole, member, isViewer)
   const { displayName, avatarUrl } = member.user
 
   return (
@@ -49,7 +38,7 @@ export function MemberSettingsRow({
       <UserAvatar name={displayName} src={avatarUrl} />
       <div className="min-w-0 flex-1">
         <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
-          <span className="truncate">{displayName}</span>
+          <bdi className="truncate">{displayName}</bdi>
           {isViewer && (
             <span className="shrink-0 text-xs font-normal text-muted-foreground">(you)</span>
           )}
@@ -64,12 +53,12 @@ export function MemberSettingsRow({
           <time dateTime={member.joinedAt}>{joinedFormat.format(new Date(member.joinedAt))}</time>
         </p>
       </div>
-      {allowed && (
+      {entries.length > 0 && onAction && (
         <MemberActionsMenu
           memberName={displayName}
-          memberRole={member.role}
-          roomName={roomName}
-          canChangeRole={allowed.canChangeRole}
+          entries={entries}
+          onAction={onAction}
+          busy={busy}
         />
       )}
     </li>

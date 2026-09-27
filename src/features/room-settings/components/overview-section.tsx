@@ -101,7 +101,7 @@ export function OverviewSection({ room, className }: OverviewSectionProps) {
       {room.myRole === 'owner' && (
         <>
           <Separator />
-          <DangerZone roomId={roomId} roomName={room.room.name} />
+          <DangerZone room={room} />
         </>
       )}
     </div>

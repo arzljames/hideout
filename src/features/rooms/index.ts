@@ -9,7 +9,6 @@ export {
   useUpdateRoom,
 } from './api'
 export { CreateRoomDialog } from './components/create-room-dialog'
-export { MemberList } from './components/member-list'
 export { MemberPanelToggle } from './components/member-panel-toggle'
 export { RoomEmojiGrid } from './components/room-emoji-grid'
 export { RoomError } from './components/room-error'
@@ -41,6 +40,7 @@ export { groupMembersByRole, type MemberGroup } from './member-groups'
 export { resetMemberPanelStore, useMemberPanelStore } from './member-panel-store'
 export {
   dropRoom,
+  getCachedRoomDetail,
   getCachedRoomName,
   replaceCachedRoom,
   roomKeys,
@@ -55,10 +55,14 @@ export {
   type RoomEmoji,
 } from './room-emojis'
 export {
+  applyMemberJoined,
+  applyMemberLeft,
   applyMemberRemoved,
+  applyMemberRoleChanged,
   applyRoomDeleted,
   applyRoomUpdated,
   roomGoneMessage,
+  setCachedMyRole,
   type RoomGone,
   type RoomGoneKind,
 } from './room-events'

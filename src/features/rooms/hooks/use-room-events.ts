@@ -1,12 +1,13 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { meQueryOptions } from '@/features/auth'
 import { useRealtimeReady } from '@/hooks/use-realtime-ready'
 import { useRealtimeTopic } from '@/hooks/use-realtime-topic'
 import { isolate } from '@/lib/bidi'
 import { parseRoomEvent, realtimeTopics } from '@/lib/realtime/events'
 import { STUCK_AFTER_MS, type TopicStatus } from '@/lib/realtime/topics'
-import { isRoomNotFound, roomQueryOptions } from '../api'
+import { isRoomNotFound, roomMutationKeys, roomQueryOptions } from '../api'
 import {
   applyChannelOrder,
   channelMutationKeys,
@@ -18,7 +19,12 @@ import {
   whenChannelReorderSettles,
 } from '../channel-cache'
 import { roomKeys, sameRoomId } from '../room-cache'
-import { applyMemberJoined, applyRoomUpdated } from '../room-events'
+import {
+  applyMemberJoined,
+  applyMemberLeft,
+  applyMemberRoleChanged,
+  applyRoomUpdated,
+} from '../room-events'
 import type { Channel, ReorderChannelsBody } from '../types'
 import { useLeaveChannelIfViewing } from './use-leave-channel-if-viewing'
 import { useRoomGone } from './use-room-gone'
@@ -68,6 +74,11 @@ export interface RoomEventsState {
  *   own echo (the exact order an in-flight PUT sent) needs no refetch; an update meanwhile keeps
  *   the channel's optimistic position and also refetches once the reorder settles.
  * - `member:joined` adds the member in role order (deduped by user id).
+ * - `member:left` removes the member. When it's the signed-in user (left or removed elsewhere),
+ *   the room is gone for us: leave, drop, toast. A leave this tab has in flight is left to its
+ *   mutation, which navigates and toasts itself.
+ * - `member:role_changed` updates the role and regroups the member; for the signed-in user
+ *   `myRole` follows (so owner/admin controls appear or disappear).
  * - `channel:deleted` leaves the channel (and its voice session) if open, forgets it, and toasts
  *   when it was on screen. A delete this tab has in flight is left to its mutation.
  * - Events naming another room are ignored.
@@ -204,6 +215,26 @@ export function useRoomEvents(roomId: string): RoomEventsState {
         case 'member:joined':
           if (!sameRoomId(parsed.data.member.roomId, roomId)) return
           applyMemberJoined(queryClient, roomId, parsed.data)
+          return
+        case 'member:left': {
+          if (!sameRoomId(parsed.data.roomId, roomId)) return
+          const viewerId = queryClient.getQueryData(meQueryOptions.queryKey)?.id
+          if (viewerId === undefined || !sameRoomId(parsed.data.userId, viewerId)) {
+            applyMemberLeft(queryClient, roomId, parsed.data)
+            return
+          }
+          if (queryClient.isMutating({ mutationKey: roomMutationKeys.leave(roomId) }) > 0) return
+          void roomGone(roomId, 'removed')
+          return
+        }
+        case 'member:role_changed':
+          if (!sameRoomId(parsed.data.roomId, roomId)) return
+          applyMemberRoleChanged(
+            queryClient,
+            roomId,
+            parsed.data,
+            queryClient.getQueryData(meQueryOptions.queryKey)?.id,
+          )
           return
       }
     },

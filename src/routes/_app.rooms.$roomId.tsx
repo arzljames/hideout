@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { MemberList } from '@/features/members'
 import {
   loadRoom,
   redirectToLowercaseRoomId,
@@ -27,7 +28,11 @@ function RoomRoute() {
   const { paused } = useRoomEvents(roomId)
 
   return (
-    <RoomLayout room={room} liveUpdatesPaused={paused}>
+    <RoomLayout
+      room={room}
+      liveUpdatesPaused={paused}
+      renderMembers={(className) => <MemberList room={room} className={className} />}
+    >
       <Outlet />
     </RoomLayout>
   )

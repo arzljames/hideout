@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { dropRoom, getCachedRoomName, replaceCachedRoom, roomKeys, sameRoomId } from './room-cache'
-import type { Member, Role, Room, RoomDetail } from './types'
+import type { Member, MyRoom, Role, Room, RoomDetail } from './types'
 
 /** What a "room gone" event left behind, for the caller's toast and navigation. */
 export interface RoomGone {
@@ -46,6 +46,57 @@ export function applyMemberJoined(
       index === -1 ? [...others, member] : [...others.slice(0, index), member, ...others.slice(index)]
     return { ...detail, members }
   })
+}
+
+/**
+ * `member:left` (left or removed), or this tab's own optimistic remove: drop the member from the
+ * cached room. No-op when they aren't listed.
+ */
+export function applyMemberLeft(
+  queryClient: QueryClient,
+  roomId: string,
+  { userId }: { userId: string },
+): void {
+  queryClient.setQueryData<RoomDetail>(roomKeys.detail(roomId), (detail) => {
+    if (!detail || !detail.members.some((item) => sameRoomId(item.user.id, userId))) return detail
+    return { ...detail, members: detail.members.filter((item) => !sameRoomId(item.user.id, userId)) }
+  })
+}
+
+/** Set the signed-in user's role in a room, in the detail and list caches, where cached. */
+export function setCachedMyRole(queryClient: QueryClient, roomId: string, myRole: Role): void {
+  queryClient.setQueryData<RoomDetail>(roomKeys.detail(roomId), (detail) =>
+    detail && detail.myRole !== myRole ? { ...detail, myRole } : detail,
+  )
+  queryClient.setQueryData<MyRoom[]>(roomKeys.list, (rooms) =>
+    rooms?.map((entry) => (sameRoomId(entry.room.id, roomId) ? { ...entry, myRole } : entry)),
+  )
+}
+
+/**
+ * `member:role_changed`: update the member's role and move them to their new group (a transfer
+ * sends two: the old owner → admin, the new owner → owner). When it's the signed-in user
+ * (`viewerId`), `myRole` follows, so role-gated controls update. A member who isn't listed is
+ * ignored (a refetch will bring them).
+ */
+export function applyMemberRoleChanged(
+  queryClient: QueryClient,
+  roomId: string,
+  { userId, role }: { userId: string; role: Role },
+  viewerId: string | undefined,
+): void {
+  queryClient.setQueryData<RoomDetail>(roomKeys.detail(roomId), (detail) => {
+    if (!detail) return detail
+    const member = detail.members.find((item) => sameRoomId(item.user.id, userId))
+    if (!member || member.role === role) return detail
+    const members = detail.members
+      .map((item) => (item === member ? { ...item, role } : item))
+      .sort(compareMembers)
+    return { ...detail, members }
+  })
+  if (viewerId !== undefined && sameRoomId(userId, viewerId)) {
+    setCachedMyRole(queryClient, roomId, role)
+  }
 }
 
 function goneRoom(queryClient: QueryClient, roomId: string, kind: RoomGoneKind): RoomGone {
