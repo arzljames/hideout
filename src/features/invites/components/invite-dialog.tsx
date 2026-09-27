@@ -1,5 +1,5 @@
 import { Link as LinkIcon, UserPlus } from 'lucide-react'
-import type { ReactNode, RefObject } from 'react'
+import { useState, type ReactNode, type RefObject } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -47,9 +47,17 @@ export function InviteDialog({
   className,
 }: InviteDialogProps) {
   const canCreateLinks = myRole !== 'member'
+  // Works controlled (menu item) or uncontrolled (DialogTrigger), so a sent invite can close it.
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isOpen = open ?? uncontrolledOpen
+  const setOpen = (next: boolean) => {
+    if (open === undefined) setUncontrolledOpen(next)
+    onOpenChange?.(next)
+  }
+  const close = () => setOpen(false)
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={setOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent
         className={cn('sm:max-w-md', className)}
@@ -89,11 +97,11 @@ export function InviteDialog({
               <InviteLinkTab roomId={roomId} roomName={roomName} />
             </TabsContent>
             <TabsContent value="steam" className="pt-2">
-              <InviteSteamTab roomId={roomId} />
+              <InviteSteamTab roomId={roomId} onSent={close} />
             </TabsContent>
           </Tabs>
         ) : (
-          <InviteSteamTab roomId={roomId} />
+          <InviteSteamTab roomId={roomId} onSent={close} />
         )}
 
         <DialogFooter>
