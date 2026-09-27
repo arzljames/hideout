@@ -11,7 +11,7 @@ Frontend for Hideout: invite-only voice and text rooms for Steam players. This r
 - **TanStack Router** with file-based routing (`@tanstack/router-plugin/vite`)
 - TanStack Query for all server data; Zustand for UI-only state that outlives a route (e.g. the voice session)
 - `openapi-typescript` + `openapi-fetch` for a typed API client generated from hideout-api's contract
-- `@supabase/supabase-js` for reading messages and live updates (read-only)
+- `@supabase/supabase-js` for Realtime Broadcast subscriptions only (read-only; data is read over REST)
 - `livekit-client` + `@livekit/components-react` for voice (hooks only; UI is built with shadcn components)
 - Zod for form schemas, search params, and Realtime payload validation
 - Vitest + React Testing Library + MSW; Playwright for e2e
@@ -107,7 +107,7 @@ Done means: `npm run typecheck && npm run lint && npm run test` pass, and `npm r
 - `src/lib/api/schema.gen.ts` is generated. Never edit it. Never hand-write request/response types that duplicate it.
 - All HTTP calls go through `src/lib/api/client.ts` (`openapi-fetch`, `credentials: 'include'`, typed errors).
 - If a feature needs an endpoint or field that isn't in the contract, **stop and write it up** as a request for hideout-api (method, path, request, response, error codes, why). Don't invent the shape.
-- Supabase Realtime `messages` rows are also part of the contract. Their type lives in `src/features/messages/types.ts` and every payload is parsed with Zod so schema drift fails loudly.
+- Messages are read over REST (`GET /api/channels/{channelId}/messages`, cursor-paged, newest first) and kept live through Realtime **Broadcast** events `message:created|updated|deleted` on `channel:<channelId>`, not Postgres change rows. `src/features/messages/types.ts` only aliases the contract's `Message`/`MessagePage` types; realtime payloads are parsed with Zod (`src/lib/realtime/events.ts`) before they touch the cache.
 - After `npm run gen:api`, run typecheck. Type errors mean the contract changed; fix call sites, don't cast around them.
 
 ## Talking to the API
@@ -126,8 +126,8 @@ Read env only through `src/lib/env.ts` (Zod-validated `import.meta.env`). Allowe
 - **Supabase:** one client in `lib/supabase.ts`, read-only. Its `realtime.accessToken` callback returns the in-memory token from `lib/realtime/access-token.ts`; this is required, because supabase-js's default callback falls back to the anon key on every heartbeat. Never call `.insert/.update/.delete/.rpc` from the browser; writes go through the API.
 - **Realtime token:** `lib/realtime/token-manager.ts` fetches `GET /api/auth/realtime-token`, refreshes 60 s before `expiresAt`, backs off with jitter on 429 or failures, and stops on 401. Tabs share one token per user: the holder of the `hideout:realtime-token:<profileId>` Web Lock refreshes it and posts it on `BroadcastChannel('hideout-realtime:<profileId>')`. Messages carry the profile id, and tokens whose JWT `sub` isn't the signed-in user are refused. Sign-out posts `signout` so the user's other tabs end their session too. Without those APIs each tab manages its own. Tokens stay in memory only and are never logged. `startRealtime()`/`stopRealtime()` live in `lib/realtime/connection.ts`; `useRealtimeConnection(me.id)` starts it in the `_app`/`_focus` layouts and `endSession` stops it.
 - **Realtime topics:** server events are private Broadcast messages named by their key in `lib/realtime/events.schema.json` (`npm run gen:events`), and every payload is parsed with the Zod schemas in `lib/realtime/events.ts`. Join topics only through `useRealtimeTopic(topic, listener)`: one channel per topic, removed when the last listener unmounts, recreated only if the server closes it. `useUserEvents` is in `features/realtime`, `useRoomEvents` in `features/rooms`. After rejoining, refetch what the topic covers.
-- **Messages realtime:** one subscription per open text channel. After reconnect, fetch messages newer than the last one held. Deduplicate by id.
-- **Messages:** optimistic send with a temp id, reconciled by the realtime insert; failed sends show a retry action. Send an `Idempotency-Key` per message.
+- **Messages realtime:** `useChannelMessages` joins `channel:<id>` only while the text channel is open. Cache writes go through the `@/features/messages` helpers (`upsertMessage`, `removeMessage`, `mergeBackfill`, `resetMessages`, `dropPendingEcho`). After a rejoin, backfill with `?after=<getNewestMessageId>` and follow `nextCursor`; after a gap over 5 minutes, or more than 5 backfill pages, reload the visible history instead. Deduplicate by id.
+- **Messages:** optimistic pending rows with an `Idempotency-Key` per message, reused on every retry; reconciled by the POST response (deduped by id), with `dropPendingEcho` for a live echo that arrives first. Failed sends show Retry / Edit / Discard, and 429, network and 5xx failures auto-retry with backoff while online.
 - **Voice:** one LiveKit `Room` in the voice store, surviving route changes. Fresh token per join. Explicit states for mic permission, denied, connecting, connected, reconnecting, disconnected, kicked.
 - **User content:** never `dangerouslySetInnerHTML`. Linkify safely; links get `rel="noopener noreferrer nofollow"` and `target="_blank"`.
 

@@ -45,3 +45,15 @@ if (!Element.prototype.releasePointerCapture) {
 
 // TanStack Router's scroll restoration calls window.scrollTo, which jsdom doesn't implement.
 window.scrollTo = () => {}
+
+// @tanstack/react-virtual sizes its scroll element with offsetHeight, which jsdom reports as 0,
+// so a virtualized list (the message log, in a ScrollArea viewport) would render no rows. Give
+// ScrollArea viewports a screen-sized box; rows still measure 0, so every row renders.
+const offsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
+Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+  configurable: true,
+  get(this: HTMLElement) {
+    if (this.getAttribute('data-slot') === 'scroll-area-viewport') return 800
+    return (offsetHeight?.get?.call(this) as number | undefined) ?? 0
+  },
+})

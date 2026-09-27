@@ -111,11 +111,31 @@ describe('subscribeTopic', () => {
     channel.emitStatus('SUBSCRIBED')
 
     expect(a.statuses).toEqual([
-      { type: 'subscribed', afterError: false },
-      { type: 'subscribed', afterError: true },
+      { type: 'subscribed', afterError: false, downForMs: 0 },
+      { type: 'subscribed', afterError: true, downForMs: 0 },
     ])
     // supabase-js rejoins by itself: no new channel per error.
     expect(fakeSupabase.created).toHaveLength(1)
+  })
+
+  it('reports how long the topic was down since it last left SUBSCRIBED', () => {
+    const a = listener()
+    subscribeTopic(TOPIC, a.value)
+    const channel = onlyChannel()
+    vi.advanceTimersByTime(1_000)
+    channel.emitStatus('SUBSCRIBED')
+    vi.advanceTimersByTime(60_000)
+
+    channel.emitStatus('CHANNEL_ERROR')
+    vi.advanceTimersByTime(4_000)
+    channel.emitStatus('TIMED_OUT')
+    vi.advanceTimersByTime(3_000)
+    channel.emitStatus('SUBSCRIBED')
+
+    expect(a.statuses).toEqual([
+      { type: 'subscribed', afterError: false, downForMs: 0 },
+      { type: 'subscribed', afterError: true, downForMs: 7_000 },
+    ])
   })
 
   it('tells a late listener the topic is already subscribed', () => {
@@ -124,7 +144,7 @@ describe('subscribeTopic', () => {
 
     const late = listener()
     subscribeTopic(TOPIC, late.value)
-    expect(late.statuses).toEqual([{ type: 'subscribed', afterError: false }])
+    expect(late.statuses).toEqual([{ type: 'subscribed', afterError: false, downForMs: 0 }])
   })
 
   it('reports stuck after 30 s without SUBSCRIBED, then again with backoff up to 60 s', () => {
@@ -142,7 +162,8 @@ describe('subscribeTopic', () => {
 
     onlyChannel().emitStatus('SUBSCRIBED')
     vi.advanceTimersByTime(10 * 60_000)
-    expect(a.statuses.at(-1)).toEqual({ type: 'subscribed', afterError: true })
+    // Never joined: down since it started joining (30 s + 60 s + 60 s).
+    expect(a.statuses.at(-1)).toEqual({ type: 'subscribed', afterError: true, downForMs: 150_000 })
     expect(a.statuses).toHaveLength(4)
   })
 
@@ -172,7 +193,7 @@ describe('subscribeTopic', () => {
     const replacement = onlyChannel()
     expect(replacement).not.toBe(closed)
     replacement.emitStatus('SUBSCRIBED')
-    expect(a.statuses.at(-1)).toEqual({ type: 'subscribed', afterError: true })
+    expect(a.statuses.at(-1)).toEqual({ type: 'subscribed', afterError: true, downForMs: 2_000 })
   })
 
   it('fetches a new token when a join fails with a JWT error', async () => {

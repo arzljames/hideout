@@ -1,21 +1,12 @@
-import type { ChatMessage } from '../sample-messages'
+import type { Message } from '../types'
 
 /** Consecutive messages from one author within this window share a header. */
 const GROUP_WINDOW_MS = 7 * 60 * 1000
 
-export interface MessageGroupData {
-  id: string
-  author: ChatMessage['author']
-  sentAt: string
-  messages: ChatMessage[]
-}
-
-export interface MessageDay {
-  /** Local date key, e.g. "2026-09-24". */
-  key: string
-  sentAt: string
-  groups: MessageGroupData[]
-}
+/** One row of the virtualized message log. */
+export type MessageLogRow =
+  | { kind: 'day'; key: string; createdAt: string }
+  | { kind: 'message'; key: string; message: Message; isFirst: boolean }
 
 function localDayKey(iso: string): string {
   const date = new Date(iso)
@@ -24,36 +15,35 @@ function localDayKey(iso: string): string {
   return `${date.getFullYear()}-${month}-${day}`
 }
 
-/** Split messages (oldest first) into days, then into author groups. */
-export function groupMessages(messages: ChatMessage[]): MessageDay[] {
-  const days: MessageDay[] = []
+function authorKey(message: Message): string | null {
+  return message.author?.id.toLowerCase() ?? null
+}
+
+/**
+ * Rows for messages (oldest first): a divider at each new local day, then messages, where
+ * `isFirst` starts an author group (a new author, a deleted author, or a gap over 7 minutes).
+ */
+export function toLogRows(messages: readonly Message[]): MessageLogRow[] {
+  const rows: MessageLogRow[] = []
+  let previous: Message | undefined
+  let previousDay: string | undefined
 
   for (const message of messages) {
-    const key = localDayKey(message.sentAt)
-    let day = days.at(-1)
-    if (!day || day.key !== key) {
-      day = { key, sentAt: message.sentAt, groups: [] }
-      days.push(day)
+    const day = localDayKey(message.createdAt)
+    if (day !== previousDay) {
+      rows.push({ kind: 'day', key: `day-${day}`, createdAt: message.createdAt })
+      previousDay = day
+      previous = undefined
     }
-
-    const group = day.groups.at(-1)
-    const lastInGroup = group?.messages.at(-1)
-    const sameAuthor = group?.author.id === message.author.id
-    const withinWindow =
-      lastInGroup !== undefined &&
-      new Date(message.sentAt).getTime() - new Date(lastInGroup.sentAt).getTime() <= GROUP_WINDOW_MS
-
-    if (group && sameAuthor && withinWindow) {
-      group.messages.push(message)
-    } else {
-      day.groups.push({
-        id: message.id,
-        author: message.author,
-        sentAt: message.sentAt,
-        messages: [message],
-      })
-    }
+    const author = authorKey(message)
+    const continues =
+      previous !== undefined &&
+      author !== null &&
+      authorKey(previous) === author &&
+      Date.parse(message.createdAt) - Date.parse(previous.createdAt) <= GROUP_WINDOW_MS
+    rows.push({ kind: 'message', key: message.id.toLowerCase(), message, isFirst: !continues })
+    previous = message
   }
 
-  return days
+  return rows
 }
